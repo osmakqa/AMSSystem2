@@ -331,7 +331,7 @@ const AntimicrobialRequestForm: React.FC<AntimicrobialRequestFormProps> = ({ isO
       ? (patientMode === 'adult' ? ADULT_MONOGRAPHS[selectedDrugMeta.value] : PEDIATRIC_MONOGRAPHS[selectedDrugMeta.value])
       : undefined;
     
-    if (monograph) {
+    if (monograph && selectedDrugMeta) {
         let html = `<h3 class="font-bold text-gray-800 text-lg mb-2">${selectedDrugMeta.value} – ${patientMode === "adult" ? "Adult" : "Pediatric"} Monograph</h3>`;
         if (monograph.spectrum) html += `<p class="mb-1 text-gray-700"><strong class="text-gray-900">Spectrum:</strong> ${monograph.spectrum}</p>`;
         if (monograph.dosing) html += `<p class="mb-1 text-gray-700"><strong class="text-gray-900">Dosing:</strong> ${monograph.dosing}</p>`;
@@ -665,7 +665,7 @@ const AntimicrobialRequestForm: React.FC<AntimicrobialRequestFormProps> = ({ isO
             <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
                 <div>
                     <span class="text-[10px] text-blue-400 uppercase font-semibold">Antimicrobial</span>
-                    <h2 class="text-xl font-bold text-blue-900 leading-tight">${p.antimicrobial || '—'}</h2>
+                    <h2 class="text-xl font-bold text-blue-900 leading-tight">${p.antimicrobial || '—'}</h2
                 </div>
                 <span class="px-3 py-1 rounded-full text-xs font-bold border ${drugColor} self-start md:self-center text-center">
                     ${p.drug_type}
