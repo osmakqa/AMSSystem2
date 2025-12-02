@@ -326,12 +326,15 @@ const AntimicrobialRequestForm: React.FC<AntimicrobialRequestFormProps> = ({ isO
       id_specialist: selectedDrugMeta?.type === DrugType.RESTRICTED ? prev.id_specialist : '',
     }));
 
+    if (!selectedDrugMeta) {
+         setMonographHtml(currentDrug ? `<p class="text-gray-700"><strong>${currentDrug}</strong>: No monograph found.</p>` : '<p class="text-gray-600">Select an antimicrobial to view its monograph.</p>');
+         return;
+    }
+
     // Update Monograph
-    const monograph = selectedDrugMeta
-      ? (patientMode === 'adult' ? ADULT_MONOGRAPHS[selectedDrugMeta.value] : PEDIATRIC_MONOGRAPHS[selectedDrugMeta.value])
-      : undefined;
+    const monograph = patientMode === 'adult' ? ADULT_MONOGRAPHS[selectedDrugMeta.value] : PEDIATRIC_MONOGRAPHS[selectedDrugMeta.value];
     
-    if (monograph && selectedDrugMeta) {
+    if (monograph) {
         let html = `<h3 class="font-bold text-gray-800 text-lg mb-2">${selectedDrugMeta.value} – ${patientMode === "adult" ? "Adult" : "Pediatric"} Monograph</h3>`;
         if (monograph.spectrum) html += `<p class="mb-1 text-gray-700"><strong class="text-gray-900">Spectrum:</strong> ${monograph.spectrum}</p>`;
         if (monograph.dosing) html += `<p class="mb-1 text-gray-700"><strong class="text-gray-900">Dosing:</strong> ${monograph.dosing}</p>`;
