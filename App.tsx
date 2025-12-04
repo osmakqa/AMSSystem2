@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import Login from './components/Login';
 import Layout from './components/Layout';
@@ -330,7 +329,6 @@ function App() {
   };
 
   const getFilteredDataForCurrentView = () => {
-    // ... (Filter logic remains identical)
     const isIdsUnfilteredView = user?.role === UserRole.IDS && (activeTab === 'Approved Restricted' || activeTab === 'Disapproved Restricted');
     const isPendingView = activeTab === 'Pending';
     const isAmsAdminView = user?.role === UserRole.AMS_ADMIN;
@@ -348,10 +346,22 @@ function App() {
 
     if (user?.role === UserRole.PHARMACIST) {
       switch (activeTab) {
-        case 'Pending': return items.filter(i => statusMatches(i.status, PrescriptionStatus.PENDING));
-        case 'Approved': return items.filter(i => statusMatches(i.status, PrescriptionStatus.APPROVED) && i.drug_type === DrugType.MONITORED);
-        case 'Disapproved': return items.filter(i => statusMatches(i.status, PrescriptionStatus.DISAPPROVED) && i.drug_type === DrugType.MONITORED);
-        case 'For IDS Approval': return items.filter(i => statusMatches(i.status, PrescriptionStatus.FOR_IDS_APPROVAL));
+        case 'Pending': 
+          // Show all pending requests so Pharmacist can triage them
+          return items.filter(i => statusMatches(i.status, PrescriptionStatus.PENDING));
+        case 'Approved': 
+          // Only show MONITORED drugs that are APPROVED in this tab
+          return items.filter(i => statusMatches(i.status, PrescriptionStatus.APPROVED) && i.drug_type === DrugType.MONITORED);
+        case 'Disapproved': 
+          // Show MONITORED drugs that are DISAPPROVED
+          // AND Restricted drugs disapproved by Pharmacist (not IDS)
+          // We check !i.ids_disapproved_at to confirm it wasn't the IDS who rejected it
+          return items.filter(i => 
+            statusMatches(i.status, PrescriptionStatus.DISAPPROVED) && 
+            (i.drug_type === DrugType.MONITORED || (i.drug_type === DrugType.RESTRICTED && !i.ids_disapproved_at))
+          );
+        case 'For IDS Approval': 
+          return items.filter(i => statusMatches(i.status, PrescriptionStatus.FOR_IDS_APPROVAL));
       }
     }
     
