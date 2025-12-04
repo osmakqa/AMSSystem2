@@ -10,7 +10,7 @@ import NewRequestModal from './components/NewRequestModal';
 import DetailModal from './components/DetailModal';
 import DisapproveModal from './components/DisapproveModal';
 import ChartDetailModal from './components/ChartDetailModal';
-import WorkflowModal from './components/WorkflowModal'; 
+import UserManualModal from './components/UserManualModal'; 
 import AntimicrobialRequestForm from './components/AntimicrobialRequestForm'; 
 import AMSAuditForm from './components/AMSAuditForm'; 
 import AMSAuditTable from './components/AMSAuditTable'; 
@@ -79,7 +79,7 @@ function App() {
   const [selectedItemForView, setSelectedItemForView] = useState<Prescription | null>(null);
   const [pendingAction, setPendingAction] = useState<{id: number, type: ActionType} | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isWorkflowModalOpen, setIsWorkflowModalOpen] = useState(false);
+  const [isUserManualOpen, setIsUserManualOpen] = useState(false);
   const [isAntimicrobialRequestFormOpen, setIsAntimicrobialRequestFormOpen] = useState(false); 
   
   // Audit States
@@ -528,7 +528,7 @@ alter table requests add column if not exists findings jsonb default '[]'::jsonb
 
   return (
     <>
-      <WorkflowModal isOpen={isWorkflowModalOpen} onClose={() => setIsWorkflowModalOpen(false)} />
+      <UserManualModal isOpen={isUserManualOpen} onClose={() => setIsUserManualOpen(false)} />
       <AntimicrobialRequestForm 
         isOpen={isAntimicrobialRequestFormOpen}
         onClose={() => setIsAntimicrobialRequestFormOpen(false)}
@@ -552,17 +552,13 @@ alter table requests add column if not exists findings jsonb default '[]'::jsonb
         isOpen={!!selectedAuditForView}
         onClose={() => setSelectedAuditForView(null)}
         audit={selectedAuditForView}
-        onEdit={(audit) => {
-            setSelectedAuditToEdit(audit);
-            setIsAMSAuditFormOpen(true);
-        }}
         onSave={loadAudits} 
       />
 
       {!user ? (
         <Login 
           onLogin={handleLogin} 
-          onOpenWorkflow={() => setIsWorkflowModalOpen(true)} 
+          onOpenManual={() => setIsUserManualOpen(true)} 
           onOpenAntimicrobialRequestForm={() => setIsAntimicrobialRequestFormOpen(true)}
           onOpenAuditForm={() => {
               setSelectedAuditToEdit(null);

@@ -13,6 +13,7 @@
 | **v1.4** | [Date] | **AI Clinical Guardrails** | Integration of Gemini API for Real-time Renal Dosing checks and Pediatric Dosing verification. | QA Head / AMS Head |
 | **v1.5** | [Date] | **Analytics Dashboard** | Added "Data Analysis" tab for AMS Admins with utilization charts, IDS turnaround times, and export features. | AMS Committee Head |
 | **v1.6** | [Date] | **Public Request Portal** | Added "Submit New Request" button on login page for Residents to submit without full account access. | IT Head |
+| **v1.7** | [Date] | **AMS Audit Tool & Structured Findings** | <ul style="margin:0;padding-left:15px;"><li>**Audit Tool Upgrade:** Full digitisation of AMS Audit form with AI Guardrails and Auto-eGFR.</li><li>**Structured Findings:** Added "Click-to-Comment" findings for Pharmacists reviewing requests.</li><li>**General Notes:** Implemented "General Audit Note" for high-level audit summaries.</li><li>**UI/UX:** Enhanced modal layering (z-index) and removed redundant "Edit Original Data" actions.</li></ul> | AMS Committee Head / IT Head |
 
 ---
 *This log controls changes made during or subsequent to the design and development of products and services.*

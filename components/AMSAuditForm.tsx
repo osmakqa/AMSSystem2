@@ -300,7 +300,7 @@ const DiagnosisGuideModal: React.FC<DiagnosisGuideModalProps> = ({ onClose, onSe
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 z-[60] flex items-center justify-center p-4 backdrop-blur-sm" onClick={onClose}>
+    <div className="fixed inset-0 bg-black bg-opacity-50 z-[120] flex items-center justify-center p-4 backdrop-blur-sm" onClick={onClose}>
       <div className="bg-white rounded-xl w-full max-w-4xl max-h-[85vh] overflow-hidden flex flex-col shadow-2xl" onClick={e => e.stopPropagation()}>
         <div className="bg-gradient-to-r from-gray-800 to-gray-700 p-4 flex justify-between items-center text-white">
           <h3 className="font-bold text-lg">Appendix II - Diagnostic Codes Guide</h3>
@@ -353,7 +353,7 @@ const IndicationGuideModal: React.FC<IndicationGuideModalProps> = ({ onClose, on
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 z-[60] flex items-center justify-center p-4 backdrop-blur-sm" onClick={onClose}>
+    <div className="fixed inset-0 bg-black bg-opacity-50 z-[120] flex items-center justify-center p-4 backdrop-blur-sm" onClick={onClose}>
       <div className="bg-white rounded-xl w-full max-w-4xl max-h-[85vh] overflow-hidden flex flex-col shadow-2xl" onClick={e => e.stopPropagation()}>
         <div className="bg-gradient-to-r from-gray-800 to-gray-700 p-4 flex justify-between items-center text-white">
           <h3 className="font-bold text-lg">Indication Type Guide</h3>
@@ -1001,7 +1001,7 @@ const AMSAuditForm: React.FC<AMSAuditFormProps> = ({ isOpen, onClose, initialDat
       
       {/* Review Modal - Matched to Detail Modal Style */}
       {showReview && (
-        <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-[70] p-4 backdrop-blur-md">
+        <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-[110] p-4 backdrop-blur-md">
             <div className="bg-white rounded-xl shadow-2xl w-full max-w-5xl max-h-[90vh] flex flex-col overflow-hidden animate-fade-in border border-gray-200">
                 <div className="bg-gradient-to-r from-gray-800 to-gray-700 p-4 flex justify-between items-center text-white shadow-md">
                     <h3 className="font-bold text-lg flex items-center gap-2">
@@ -1028,7 +1028,7 @@ const AMSAuditForm: React.FC<AMSAuditFormProps> = ({ isOpen, onClose, initialDat
         </div>
       )}
 
-      <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 p-4 backdrop-blur-sm animate-fade-in" onClick={onClose}>
+      <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-[100] p-4 backdrop-blur-sm animate-fade-in" onClick={onClose}>
         <div className="bg-gray-50 rounded-xl shadow-2xl w-full max-w-6xl max-h-[95vh] flex flex-col overflow-hidden border border-gray-200" onClick={(e) => e.stopPropagation()}>
           {/* Header */}
           <header className="flex items-center justify-between gap-4 bg-gradient-to-r from-gray-800 to-gray-700 text-white px-6 py-4 sticky top-0 z-10 shadow-lg">

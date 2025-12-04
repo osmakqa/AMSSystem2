@@ -8,11 +8,10 @@ interface AMSAuditDetailModalProps {
   isOpen: boolean;
   onClose: () => void;
   audit: AMSAudit | null;
-  onEdit: (audit: AMSAudit) => void;
   onSave?: () => void;
 }
 
-const AMSAuditDetailModal: React.FC<AMSAuditDetailModalProps> = ({ isOpen, onClose, audit, onEdit, onSave }) => {
+const AMSAuditDetailModal: React.FC<AMSAuditDetailModalProps> = ({ isOpen, onClose, audit, onSave }) => {
   const [editedGeneralNote, setEditedGeneralNote] = useState('');
   const [isSaving, setIsSaving] = useState(false);
 
@@ -39,7 +38,7 @@ const AMSAuditDetailModal: React.FC<AMSAuditDetailModalProps> = ({ isOpen, onClo
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 p-4 backdrop-blur-sm animate-fade-in" onClick={onClose}>
+    <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-[100] p-4 backdrop-blur-sm animate-fade-in" onClick={onClose}>
       <div className="bg-white rounded-xl shadow-2xl w-full max-w-5xl h-[90vh] flex flex-col overflow-hidden border border-gray-200" onClick={(e) => e.stopPropagation()}>
         
         {/* Header */}
@@ -51,7 +50,6 @@ const AMSAuditDetailModal: React.FC<AMSAuditDetailModalProps> = ({ isOpen, onClo
                 </h3>
             </div>
             <div className="flex gap-2">
-                <button onClick={() => onEdit(audit)} className="text-xs bg-white/20 hover:bg-white/30 px-3 py-1 rounded transition-colors">Edit Original Data</button>
                 <button onClick={onClose} className="text-gray-400 hover:text-white transition-colors">
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
                 </button>

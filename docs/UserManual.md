@@ -45,6 +45,7 @@ The **Osmak Antimicrobial Stewardship (AMS) System** is a digital platform desig
     *   You cannot Approve these directly.
     *   Click **"For IDS Approval"** to forward the request to the Infectious Disease Specialist.
 *   **Pediatric Safety:** The system will automatically verify the `mg/kg` dose. Look for the Green (Safe) or Yellow (Alert) banner in the details modal.
+*   **Review Findings:** You can click on specific sections (e.g. Clinical Data, Medication) to add structured findings (e.g. "Wrong Dose", "Wrong Duration"). These are saved with the record.
 
 ---
 
@@ -68,6 +69,21 @@ The **Osmak Antimicrobial Stewardship (AMS) System** is a digital platform desig
     *   **Restricted/Monitored:** Specific drill-downs.
     *   **Pharmacy/IDS:** Performance metrics and turnaround times.
 *   **Export:** Click on any chart title or KPI card to open the data list, then click **"Export to CSV"**.
+
+### **AMS Audit Tool**
+The Audit Tool allows for retrospective auditing of patient charts for AMS compliance.
+
+1.  **Access:** Click the **"AMS Audit"** tab.
+2.  **New Audit:** Click **"New Audit"** to open the form.
+    *   **Context:** Enter Auditor, Ward, Shift.
+    *   **Patient:** Enter Hospital No, DOB (Age is auto-calculated), Weight, and SCr.
+    *   **AI Guardrails:** The form automatically checks **Renal Dosing** (based on calculated eGFR) and **Weight-Based Dosing** for safety.
+    *   **Coding:** Use the **"Diagnosis Code Guide"** and **"Indication Type Guide"** buttons to select standardized codes (e.g., HAI2-VAP, SP1).
+    *   **General Note:** Use the "General Audit Notes" field at the bottom to summarize the case or add clinical opinions.
+3.  **Review & Submit:** Review the summary and confirm.
+4.  **Managing Logs:**
+    *   Click **"Review"** on a row to view the audit details. You can **Edit** the General Audit Note here to add post-audit thoughts.
+    *   Click **"Edit"** to modify the original audit data if errors were made during entry.
 
 ---
 
