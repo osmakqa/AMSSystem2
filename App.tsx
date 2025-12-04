@@ -150,10 +150,12 @@ function App() {
   };
 
   useEffect(() => {
-    if (activeTab === 'AMS Audit' && user?.role === UserRole.AMS_ADMIN) {
+    if (user?.role === UserRole.AMS_ADMIN) {
+        // Load audits when AMS admin logs in, regardless of active tab initially, 
+        // to populate the Data Analysis tab immediately
         loadAudits();
     }
-  }, [activeTab, user]);
+  }, [user]);
 
   const handleLogin = (loggedInUser: User) => {
     setUser(loggedInUser);
@@ -161,7 +163,7 @@ function App() {
       setActiveTab('Pending');
     } else {
       setActiveTab('Data Analysis');
-      loadAudits();
+      // Audits loaded via useEffect above
     }
   };
 
@@ -430,7 +432,10 @@ alter table requests add column if not exists ids_approved_at timestamp with tim
 alter table requests add column if not exists ids_disapproved_at timestamp with time zone;
 alter table requests add column if not exists disapproved_reason text;
 alter table requests add column if not exists mode text;
-alter table requests add column if not exists findings jsonb default '[]'::jsonb;`}
+alter table requests add column if not exists findings jsonb default '[]'::jsonb;
+alter table audits add column if not exists audit_findings jsonb default '[]'::jsonb;
+alter table audits add column if not exists general_audit_note text;
+`}
                   </pre>
               </div>
           )}
@@ -510,7 +515,8 @@ alter table requests add column if not exists findings jsonb default '[]'::jsonb
       case 'Data Analysis':
         return <StatsChart 
                   data={data} 
-                  allData={data} 
+                  allData={data}
+                  auditData={auditData} // Passed audit data here
                   role={user?.role}
                   selectedMonth={selectedMonth}
                   onMonthChange={setSelectedMonth}

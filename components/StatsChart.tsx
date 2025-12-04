@@ -3,13 +3,14 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, 
   PieChart, Pie, Cell
 } from 'recharts';
-import { Prescription, PrescriptionStatus, DrugType } from '../types';
+import { Prescription, PrescriptionStatus, DrugType, AMSAudit } from '../types';
 import ChartDetailModal from './ChartDetailModal';
 import { IDS_SPECIALISTS, PHARMACISTS } from '../constants';
 
 interface StatsChartProps {
   data: Prescription[];
   allData: Prescription[];
+  auditData?: AMSAudit[]; // Added auditData prop
   role?: string;
   selectedMonth: number;
   onMonthChange: (month: number) => void;
@@ -118,7 +119,7 @@ const FilterControls = ({ selectedMonth, onMonthChange, selectedYear, onYearChan
 
 
 // --- Main Component ---
-const StatsChart: React.FC<StatsChartProps> = ({ data, allData, selectedMonth, onMonthChange, selectedYear, onYearChange }) => {
+const StatsChart: React.FC<StatsChartProps> = ({ data, allData, auditData = [], selectedMonth, onMonthChange, selectedYear, onYearChange }) => {
   const [activeTab, setActiveTab] = useState('General');
   const [modeFilter, setModeFilter] = useState<'All' | 'adult' | 'pediatric'>('All');
   const [modalConfig, setModalConfig] = useState<{ isOpen: boolean; data: Prescription[]; title: string }>({ isOpen: false, data: [], title: '' });
@@ -140,7 +141,57 @@ const StatsChart: React.FC<StatsChartProps> = ({ data, allData, selectedMonth, o
     return filtered.filter(d => d.mode === modeFilter);
   }, [data, modeFilter, selectedMonth, selectedYear]);
 
-  // --- Data Processing for each Tab ---
+  // --- Audit Data Processing ---
+  const processedAuditData = useMemo(() => {
+    let audits = auditData;
+    
+    // Filter Audits by Date
+    audits = audits.filter(item => {
+      const d = new Date(item.audit_date);
+      const mMatch = selectedMonth === -1 || d.getMonth() === selectedMonth;
+      const yMatch = selectedYear === 0 || d.getFullYear() === selectedYear;
+      return mMatch && yMatch;
+    });
+
+    // Extract all antimicrobial entries from all filtered audits
+    const allAbxEntries = audits.flatMap(a => (a.antimicrobials || []).map(drug => ({ ...drug, auditor: a.auditor, auditId: a.id })));
+    
+    const totalAudits = audits.length;
+    const totalAbx = allAbxEntries.length;
+
+    // Compliance Metrics
+    const guidelinesYes = allAbxEntries.filter(a => a.guidelinesCompliance === 'Yes').length;
+    const reasonYes = allAbxEntries.filter(a => a.reasonInNote === 'Yes').length;
+    const stopYes = allAbxEntries.filter(a => a.stopReviewDocumented === 'Yes').length;
+
+    const complianceData = [
+        { name: 'Guidelines', value: totalAbx > 0 ? (guidelinesYes / totalAbx) * 100 : 0, count: guidelinesYes },
+        { name: 'Reason in Note', value: totalAbx > 0 ? (reasonYes / totalAbx) * 100 : 0, count: reasonYes },
+        { name: 'Stop/Review', value: totalAbx > 0 ? (stopYes / totalAbx) * 100 : 0, count: stopYes },
+    ];
+
+    // Diagnosis Breakdown
+    const therapeuticCount = allAbxEntries.filter(a => a.diagnosis === 'Therapeutic').length;
+    const prophylacticCount = allAbxEntries.filter(a => a.diagnosis === 'Prophylaxis').length;
+    const diagnosisData = [
+        { name: 'Therapeutic', value: therapeuticCount },
+        { name: 'Prophylactic', value: prophylacticCount },
+        { name: 'Other/Neonatal', value: totalAbx - therapeuticCount - prophylacticCount }
+    ].filter(d => d.value > 0);
+
+    return {
+        totalAudits,
+        totalAbx,
+        complianceData,
+        diagnosisData,
+        topAuditors: getTopN(audits.map(a => a.auditor), 5),
+        topDrugs: getTopN(allAbxEntries.map(a => a.drug), 5),
+        topWards: getTopN(audits.map(a => a.area), 5)
+    };
+  }, [auditData, selectedMonth, selectedYear]);
+
+
+  // --- Data Processing for Prescription Tabs ---
   const processedData = useMemo(() => {
     const source = modeFilteredData;
     // Subsets
@@ -170,6 +221,22 @@ const StatsChart: React.FC<StatsChartProps> = ({ data, allData, selectedMonth, o
       { name: 'Approved', value: idsHandled.filter(i => i.status === PrescriptionStatus.APPROVED).length },
       { name: 'Disapproved', value: idsHandled.filter(i => i.status === PrescriptionStatus.DISAPPROVED).length }
     ];
+    
+    // Pharmacy Intervention Findings (New)
+    const getFindingsDistribution = (items: Prescription[]) => {
+        const counts: Record<string, number> = {};
+        items.forEach(item => {
+            if (item.findings && Array.isArray(item.findings)) {
+                item.findings.forEach(f => {
+                    counts[f.category] = (counts[f.category] || 0) + 1;
+                });
+            }
+        });
+        return Object.entries(counts).map(([name, value]) => ({ name, value }));
+    };
+    
+    const interventionStats = getFindingsDistribution(source);
+
     const avgTimePerIds = Object.entries(idsConsults.reduce((acc, curr) => {
         if (curr.dispensed_by) {
             const time = new Date(curr.ids_approved_at || curr.ids_disapproved_at!).getTime() - new Date(curr.dispensed_date!).getTime();
@@ -207,6 +274,7 @@ const StatsChart: React.FC<StatsChartProps> = ({ data, allData, selectedMonth, o
         totalHandled: pharmacyHandled.length, avgPharmacistTime,
         topPharmacists: getTopN(pharmacyHandled.map(p => p.requested_by), 5),
         decisions: pharmacistDecisions,
+        interventionStats, // Added for chart
       },
       ids: {
         totalConsults: idsHandled.length, avgIdsTime,
@@ -218,8 +286,58 @@ const StatsChart: React.FC<StatsChartProps> = ({ data, allData, selectedMonth, o
     };
   }, [modeFilteredData]);
 
+  const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d'];
+
   const renderDashboard = () => {
     switch(activeTab) {
+      case 'Audits':
+        const a = processedAuditData;
+        return <div className="space-y-6 animate-fade-in">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <KpiCard title="Total Audits" value={a.totalAudits} subValue={`Covering ${a.totalAbx} drugs`} color="bg-amber-100 text-amber-700" icon={<svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>}/>
+                <KpiCard title="Guidelines Compliant" value={(a.complianceData[0].value).toFixed(1) + '%'} subValue={`${a.complianceData[0].count}/${a.totalAbx} items`} color="bg-green-100 text-green-700" icon={<svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>}/>
+                <KpiCard title="Indication Documented" value={(a.complianceData[1].value).toFixed(1) + '%'} subValue={`${a.complianceData[1].count}/${a.totalAbx} items`} color="bg-blue-100 text-blue-700" icon={<svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>}/>
+            </div>
+            
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <ChartWrapper title="Audit Compliance Rates">
+                    <ResponsiveContainer>
+                        <BarChart data={a.complianceData} layout="vertical" margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+                            <CartesianGrid strokeDasharray="3 3" horizontal={false}/>
+                            <XAxis type="number" domain={[0, 100]} />
+                            <YAxis type="category" dataKey="name" width={100} tick={{fontSize: 12}} />
+                            <Tooltip formatter={(value: number) => `${value.toFixed(1)}%`} cursor={{fill: 'transparent'}} />
+                            <Bar dataKey="value" fill="#f59e0b" radius={[0, 4, 4, 0]} barSize={30}>
+                                {a.complianceData.map((entry, index) => (
+                                    <Cell key={`cell-${index}`} fill={index === 0 ? '#10b981' : (index === 1 ? '#3b82f6' : '#f59e0b')} />
+                                ))}
+                            </Bar>
+                        </BarChart>
+                    </ResponsiveContainer>
+                </ChartWrapper>
+
+                <ChartWrapper title="Diagnosis Breakdown">
+                    <ResponsiveContainer>
+                        <PieChart>
+                            <Pie data={a.diagnosisData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} label>
+                                {a.diagnosisData.map((entry, index) => (
+                                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                                ))}
+                            </Pie>
+                            <Tooltip />
+                            <Legend />
+                        </PieChart>
+                    </ResponsiveContainer>
+                </ChartWrapper>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <Top5List title="Top Auditors" data={a.topAuditors} color="bg-amber-200 text-amber-900" icon={<></>} />
+                <Top5List title="Top Audited Drugs" data={a.topDrugs} color="bg-blue-200 text-blue-900" icon={<></>} />
+                <Top5List title="Top Wards Audited" data={a.topWards} color="bg-green-200 text-green-900" icon={<></>} />
+            </div>
+        </div>;
+
       case 'Restricted':
         const r = processedData.restricted;
         return <div className="space-y-6">
@@ -254,9 +372,28 @@ const StatsChart: React.FC<StatsChartProps> = ({ data, allData, selectedMonth, o
                 <KpiCard title="Total Requests Handled" value={p.totalHandled} color="bg-green-100 text-green-700" icon={<></>} />
                 <KpiCard title="Avg. First Action Time" value={p.avgPharmacistTime} color="bg-green-100 text-green-700" icon={<></>} />
             </div>
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <Top5List title="Top 5 Pharmacists by Activity" data={p.topPharmacists} color="bg-green-200 text-green-800" icon={<></>} onClick={() => setModalConfig({isOpen: true, data: modeFilteredData.filter(d => PHARMACISTS.includes(d.requested_by)), title: 'All Pharmacy Activity'})} />
-                <ChartWrapper title="Pharmacist Decisions"><ResponsiveContainer><PieChart><Pie data={p.decisions} dataKey="value" nameKey="name" outerRadius={80} label><Cell fill="#3b82f6"/><Cell fill="#a855f7"/></Pie><Tooltip content={<CustomTooltip/>}/><Legend/></PieChart></ResponsiveContainer></ChartWrapper>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div className="col-span-1">
+                    <Top5List title="Top 5 Pharmacists by Activity" data={p.topPharmacists} color="bg-green-200 text-green-800" icon={<></>} onClick={() => setModalConfig({isOpen: true, data: modeFilteredData.filter(d => PHARMACISTS.includes(d.requested_by)), title: 'All Pharmacy Activity'})} />
+                </div>
+                <div className="col-span-1">
+                    <ChartWrapper title="Pharmacist Decisions"><ResponsiveContainer><PieChart><Pie data={p.decisions} dataKey="value" nameKey="name" outerRadius={80} label><Cell fill="#3b82f6"/><Cell fill="#a855f7"/></Pie><Tooltip content={<CustomTooltip/>}/><Legend/></PieChart></ResponsiveContainer></ChartWrapper>
+                </div>
+                <div className="col-span-1">
+                    <ChartWrapper title="Intervention Findings">
+                        <ResponsiveContainer>
+                            <PieChart>
+                                <Pie data={p.interventionStats} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} label>
+                                    {p.interventionStats.map((entry, index) => (
+                                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                                    ))}
+                                </Pie>
+                                <Tooltip />
+                                <Legend />
+                            </PieChart>
+                        </ResponsiveContainer>
+                    </ChartWrapper>
+                </div>
             </div>
         </div>
       case 'IDS':
@@ -299,7 +436,7 @@ const StatsChart: React.FC<StatsChartProps> = ({ data, allData, selectedMonth, o
     }
   }
 
-  const tabs = ['General', 'Restricted', 'Monitored', 'Pharmacy', 'IDS'];
+  const tabs = ['General', 'Restricted', 'Monitored', 'Pharmacy', 'IDS', 'Audits']; // Added Audits tab
 
   return (
     <div className="space-y-8">
