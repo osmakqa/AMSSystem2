@@ -189,7 +189,6 @@ interface AntimicrobialEntry {
   miss: string;
   missWhy: string;
   treat: string;
-  auditNote: string; 
   isOpen: boolean; 
 }
 
@@ -460,7 +459,6 @@ const AMSAuditForm: React.FC<AMSAuditFormProps> = ({ isOpen, onClose, initialDat
       diagP: '', diagS: '', diagSub: '', 
       indicationCategory: '', indicationSubCategory: '', indicationSpecificType: '', 
       reason: '', guide: '', stop: '', miss: '', missWhy: '', treat: '',
-      auditNote: '', 
       isOpen: i === 0 
     }))
   );
@@ -569,7 +567,6 @@ const AMSAuditForm: React.FC<AMSAuditFormProps> = ({ isOpen, onClose, initialDat
                     miss: existing.missedN?.toString() || '',
                     missWhy: existing.missedReason,
                     treat: existing.treatment,
-                    auditNote: existing.auditNote || '', // Map Audit Note
                     isOpen: false
                 };
             } else {
@@ -577,7 +574,6 @@ const AMSAuditForm: React.FC<AMSAuditFormProps> = ({ isOpen, onClose, initialDat
                     id: i, class: '', drug: '', start: '', dose: '', unit: '', freq: '', perday: '', route: '',
                     diagP: '', diagS: '', diagSub: '', indicationCategory: '', indicationSubCategory: '', indicationSpecificType: '',
                     reason: '', guide: '', stop: '', miss: '', missWhy: '', treat: '',
-                    auditNote: '',
                     isOpen: false
                  };
             }
@@ -903,8 +899,7 @@ const AMSAuditForm: React.FC<AMSAuditFormProps> = ({ isOpen, onClose, initialDat
       stopReviewDocumented: a.stop,
       missedN: Number(a.miss) || 0,
       missedReason: a.missWhy || "",
-      treatment: a.treat,
-      auditNote: a.auditNote
+      treatment: a.treat
     }));
 
     const activeMicro = micro.filter(m => m.org || m.res || m.note).map(m => ({
@@ -1208,10 +1203,6 @@ const AMSAuditForm: React.FC<AMSAuditFormProps> = ({ isOpen, onClose, initialDat
                           <span className={`font-semibold text-sm ${item.drug ? item.drug : "Antimicrobial"} ${item.drug ? 'text-green-700' : 'text-gray-500'}`}>
                             {idx + 1}. {item.drug ? item.drug : "Antimicrobial"}
                           </span>
-                          {/* Indicator for audit note */}
-                          {item.auditNote && (
-                              <span className="bg-yellow-100 text-yellow-700 text-[10px] px-1.5 py-0.5 rounded border border-yellow-200 font-bold">Note Added</span>
-                          )}
                       </div>
                       <span className="text-[10px] uppercase font-bold tracking-wider bg-white border border-gray-200 px-2 py-1 rounded text-gray-500">{item.isOpen ? 'Collapse' : 'Expand'}</span>
                     </button>
@@ -1352,18 +1343,6 @@ const AMSAuditForm: React.FC<AMSAuditFormProps> = ({ isOpen, onClose, initialDat
                           </Select>
                         </FormGroup>
                         <FormGroup label="Treatment" required><Select value={item.treat} onChange={e => updateAbx(idx, 'treat', e.target.value)}><option value="">Select</option><option value="Empirical">Empirical</option><option value="Targeted">Targeted</option></Select></FormGroup>
-
-                        {/* Audit Note Field */}
-                        <div className="col-span-full mt-2">
-                             <FormGroup label="Audit Note / Clinical Comments">
-                                <Textarea 
-                                    value={item.auditNote} 
-                                    onChange={e => updateAbx(idx, 'auditNote', e.target.value)} 
-                                    placeholder="Enter your clinical observations or audit findings here..."
-                                    rows={2}
-                                />
-                             </FormGroup>
-                        </div>
                       </div>
                     )}
                   </div>

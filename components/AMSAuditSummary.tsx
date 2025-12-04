@@ -206,13 +206,6 @@ const AMSAuditSummary: React.FC<AMSAuditSummaryProps> = ({ data, onSectionSelect
                                       <p className="text-red-700 font-medium">{a.missedN} dose(s) - {a.missedReason}</p>
                                   </div>
                                )}
-                               {/* ADDED: Audit Note Display */}
-                               {a.auditNote && (
-                                  <div className="pt-2 mt-2 border-t border-gray-200">
-                                      <span className="block text-xs font-bold text-gray-500 uppercase mb-1">Drug Audit Note</span>
-                                      <p className="text-gray-700 italic bg-white p-2 rounded border border-gray-200 text-xs">{a.auditNote}</p>
-                                  </div>
-                               )}
                            </div>
                        </div>
                    </SectionWrapper>
