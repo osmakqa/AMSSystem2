@@ -1,3 +1,4 @@
+
 export enum UserRole {
   PHARMACIST = 'PHARMACIST',
   IDS = 'IDS',
@@ -29,7 +30,17 @@ export enum ActionType {
   FORWARD_IDS = 'FORWARD_IDS',
   DELETE = 'DELETE',
   REVERSE_TO_APPROVE = 'REVERSE_TO_APPROVE',
-  REVERSE_TO_DISAPPROVE = 'REVERSE_TO_DISAPPROVE'
+  REVERSE_TO_DISAPPROVE = 'REVERSE_TO_DISAPPROVE',
+  SAVE_FINDINGS = 'SAVE_FINDINGS'
+}
+
+export interface RequestFinding {
+  id: string;
+  section: string;
+  category: 'Wrong Choice' | 'Wrong Route' | 'Wrong Dose' | 'Wrong Duration' | 'No Infection' | 'Others';
+  details: string;
+  timestamp: string;
+  user: string;
 }
 
 export interface Prescription {
@@ -82,6 +93,36 @@ export interface Prescription {
   service_resident_name?: string;
   id_specialist?: string;
 
-  // Disapproval
+  // Disapproval & Findings
   disapproved_reason?: string;
+  findings?: RequestFinding[]; // Structured findings from review
+}
+
+export interface AuditFinding {
+  id: string;
+  section: string;
+  category: string;
+  details: string;
+  timestamp: string;
+  user: string;
+}
+
+export interface AMSAudit {
+  id: number;
+  created_at: string;
+  audit_date: string;
+  auditor: string;
+  area: string;
+  shift: string;
+  patient_hosp_no: string;
+  patient_dob: string;
+  patient_age_string: string; // Calculated age stored as string
+  general_audit_note?: string; // New field for general notes from auditor
+  
+  // JSONB columns for nested data
+  diagnostics: any;
+  history: any;
+  antimicrobials: any[]; 
+  microorganisms: any[];
+  audit_findings?: AuditFinding[]; // New field for sectional notes (Reviewer Findings)
 }

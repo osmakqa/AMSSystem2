@@ -1,5 +1,6 @@
+
 import { supabase } from './supabaseClient';
-import { Prescription, PrescriptionStatus, DrugType } from '../types';
+import { Prescription, PrescriptionStatus, DrugType, AMSAudit } from '../types';
 
 // Table name: 'requests'
 
@@ -25,13 +26,16 @@ export const fetchPrescriptions = async (): Promise<{ data: Prescription[], erro
 
 export const updatePrescriptionStatus = async (
   id: number, 
-  status: PrescriptionStatus, 
+  status: PrescriptionStatus | null | undefined, 
   updates: { [key: string]: any } // Use a flexible object for updates
 ) => {
-  const payload = { 
-    status, 
-    ...updates // Spread the dynamic updates here
+  const payload: any = { 
+    ...updates // Spread the dynamic updates here (including findings)
   };
+
+  if (status) {
+    payload.status = status;
+  }
 
   const { error } = await supabase
     .from('requests')
@@ -67,97 +71,48 @@ export const createPrescription = async (prescription: Partial<Prescription>) =>
   }
 };
 
-export const seedDatabase = async () => {
-  const now = new Date();
-  const yesterday = new Date(now);
-  yesterday.setDate(yesterday.getDate() - 1);
+// --- AUDIT FUNCTIONS ---
 
-  const mockData = [
-    {
-      patient_name: "Juan Dela Cruz",
-      hospital_number: "P-1001",
-      age: "45",
-      sex: "Male",
-      antimicrobial: "Meropenem",
-      drug_type: "Restricted",
-      status: "pending",
-      requested_by: "Hermoso, Zenaida R.",
-      ward: "ICU",
-      mode: 'adult',
-      req_date: now.toISOString(),
-      created_at: now.toISOString()
-    },
-    {
-      patient_name: "Maria Clara",
-      hospital_number: "P-1002",
-      age: "62",
-      sex: "Female",
-      antimicrobial: "Ceftriaxone",
-      drug_type: "Monitored",
-      status: "pending",
-      requested_by: "Hermoso, Zenaida R.",
-      ward: "IM",
-      mode: 'adult',
-      req_date: now.toISOString(),
-      created_at: now.toISOString()
-    },
-    {
-      patient_name: "Pedro Penduko",
-      hospital_number: "P-1003",
-      age: "10",
-      sex: "Male",
-      antimicrobial: "Vancomycin",
-      drug_type: "Restricted",
-      status: "for_ids_approval",
-      requested_by: "Oasay, Victoria C.",
-      ward: "Pediatrics",
-      mode: 'pediatric',
-      req_date: now.toISOString(),
-      created_at: now.toISOString(),
-      dispensed_by: "Oasay, Victoria C.", // Pharmacist forwarded
-      dispensed_date: now.toISOString(),
-    },
-    {
-      patient_name: "Nena Santos",
-      hospital_number: "P-1004",
-      age: "28",
-      sex: "Female",
-      antimicrobial: "Piperacillin-Tazobactam",
-      drug_type: "Monitored",
-      status: "approved",
-      requested_by: "Abello, Corazon L.",
-      dispensed_by: "Abello, Corazon L.",
-      ward: "OB",
-      mode: 'adult',
-      req_date: yesterday.toISOString(),
-      created_at: yesterday.toISOString(),
-      dispensed_date: now.toISOString()
-    },
-    {
-      patient_name: "Jose Rizal",
-      hospital_number: "P-1005",
-      age: "5",
-      sex: "Male",
-      antimicrobial: "Colistin",
-      drug_type: "Restricted",
-      status: "approved",
-      requested_by: "Calma, Annalyn B.",
-      dispensed_by: "Dr. Paulo Garcia",
-      ward: "PICU",
-      mode: 'pediatric',
-      req_date: yesterday.toISOString(),
-      created_at: yesterday.toISOString(),
-      ids_approved_at: now.toISOString() // Example of IDS approved date
-    }
-  ];
+export const createAudit = async (audit: Partial<AMSAudit>) => {
+  const { error } = await supabase
+    .from('audits')
+    .insert([audit]);
 
-  const { error } = await supabase.from('requests').insert(mockData);
   if (error) {
-    const errorMsg = `Code: ${error.code} - ${error.message}`;
-    console.error("Seed error", errorMsg);
-    return { success: false, error: errorMsg };
-  } else {
-    console.log("Database seeded successfully");
-    return { success: true };
+    console.error('Create Audit error:', JSON.stringify(error, null, 2));
+    throw error;
+  }
+};
+
+export const updateAudit = async (id: number, audit: Partial<AMSAudit>) => {
+  const { error } = await supabase
+    .from('audits')
+    .update(audit)
+    .eq('id', id);
+
+  if (error) {
+    console.error('Update Audit error:', JSON.stringify(error, null, 2));
+    throw error;
+  }
+};
+
+export const fetchAudits = async (): Promise<{ data: AMSAudit[], error: string | null }> => {
+  try {
+    const { data, error } = await supabase
+      .from('audits')
+      .select('*')
+      .order('audit_date', { ascending: false });
+
+    if (error) {
+       // If table doesn't exist yet, return empty but log
+       if (error.code === '42P01') { 
+         console.warn("Audits table does not exist yet.");
+         return { data: [], error: null };
+       }
+       return { data: [], error: error.message };
+    }
+    return { data: data as AMSAudit[], error: null };
+  } catch (err: any) {
+    return { data: [], error: err instanceof Error ? err.message : "Unknown error" };
   }
 };

@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { PHARMACISTS, IDS_SPECIALISTS, DEFAULT_PASSWORD, LOGO_URL } from '../constants';
 import { User, UserRole } from '../types';
@@ -5,11 +6,11 @@ import { User, UserRole } from '../types';
 interface LoginProps {
   onLogin: (user: User) => void;
   onOpenWorkflow: () => void;
-  onOpenAntimicrobialRequestForm: () => void; // New prop
+  onOpenAntimicrobialRequestForm: () => void;
+  onOpenAuditForm: () => void; // New Prop
 }
 
-const Login: React.FC<LoginProps> = ({ onLogin, onOpenWorkflow, onOpenAntimicrobialRequestForm }) => {
-  // Fix: Set default role to 'PHARMACIST' so the list renders immediately
+const Login: React.FC<LoginProps> = ({ onLogin, onOpenWorkflow, onOpenAntimicrobialRequestForm, onOpenAuditForm }) => {
   const [role, setRole] = useState<'PHARMACIST' | 'IDS' | 'AMS'>('PHARMACIST');
   const [selectedUser, setSelectedUser] = useState('');
   const [password, setPassword] = useState('');
@@ -129,7 +130,7 @@ const Login: React.FC<LoginProps> = ({ onLogin, onOpenWorkflow, onOpenAntimicrob
           </form>
 
            <div className="mt-8 space-y-3 pt-6 border-t border-gray-100">
-             {/* Option 2: Service Card Style Button - Reduced Height */}
+             {/* Option 2: Service Card Style Button - Submit Request */}
              <button 
                className="w-full flex items-center p-3 border-2 border-green-600 bg-green-50 rounded-xl hover:bg-green-100 transition-all shadow-sm hover:shadow-md group text-left"
                onClick={onOpenAntimicrobialRequestForm}
@@ -145,6 +146,25 @@ const Login: React.FC<LoginProps> = ({ onLogin, onOpenWorkflow, onOpenAntimicrob
                   <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 transform group-hover:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
                 </div>
              </button>
+
+             {/* New AMS Audit Button - Only Visible for AMS Role */}
+             {role === 'AMS' && (
+                <button 
+                  className="w-full flex items-center p-3 border-2 border-teal-500 bg-teal-50 rounded-xl hover:bg-teal-100 transition-all shadow-sm hover:shadow-md group text-left"
+                  onClick={onOpenAuditForm}
+                >
+                    <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center text-teal-600 mr-3 shadow-sm group-hover:scale-110 transition-transform border border-teal-100">
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" /></svg>
+                    </div>
+                    <div className="flex flex-col">
+                      <span className="text-sm font-bold text-teal-900 leading-tight">AMS Audit Tool</span>
+                      <span className="text-xs text-teal-700 opacity-90">For Clinical Auditors</span>
+                    </div>
+                    <div className="ml-auto text-teal-500">
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 transform group-hover:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
+                    </div>
+                </button>
+             )}
 
              <button 
                className="flex items-center justify-center w-full text-green-700 text-sm font-medium hover:underline gap-2 py-2 mt-2"

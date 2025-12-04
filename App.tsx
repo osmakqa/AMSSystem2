@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import Login from './components/Login';
 import Layout from './components/Layout';
@@ -9,18 +10,21 @@ import NewRequestModal from './components/NewRequestModal';
 import DetailModal from './components/DetailModal';
 import DisapproveModal from './components/DisapproveModal';
 import ChartDetailModal from './components/ChartDetailModal';
-import WorkflowModal from './components/WorkflowModal'; // Import new WorkflowModal
-import AntimicrobialRequestForm from './components/AntimicrobialRequestForm'; // Import new Request Form
-import { User, UserRole, Prescription, PrescriptionStatus, ActionType, DrugType } from './types';
+import WorkflowModal from './components/WorkflowModal'; 
+import AntimicrobialRequestForm from './components/AntimicrobialRequestForm'; 
+import AMSAuditForm from './components/AMSAuditForm'; 
+import AMSAuditTable from './components/AMSAuditTable'; 
+import AMSAuditDetailModal from './components/AMSAuditDetailModal'; 
+import { User, UserRole, Prescription, PrescriptionStatus, ActionType, DrugType, AMSAudit } from './types';
 import { 
   fetchPrescriptions, 
   updatePrescriptionStatus, 
-  seedDatabase,
-  createPrescription
+  createPrescription,
+  fetchAudits 
 } from './services/dataService';
 import { supabase } from './services/supabaseClient';
 
-// Enhanced Filter Controls Component
+// ... (FilterControls and tabsConfig remain same)
 const FilterControls = ({ selectedMonth, onMonthChange, selectedYear, onYearChange }: any) => {
   const months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
   const currentYear = new Date().getFullYear();
@@ -54,16 +58,16 @@ const FilterControls = ({ selectedMonth, onMonthChange, selectedYear, onYearChan
   );
 }
 
-// Define tabsConfig for dynamic tab rendering
 const tabsConfig: Record<UserRole, string[]> = {
   [UserRole.PHARMACIST]: ['Pending', 'Approved', 'Disapproved', 'For IDS Approval'],
   [UserRole.IDS]: ['Pending', 'Approved Restricted', 'Disapproved Restricted'],
-  [UserRole.AMS_ADMIN]: ['Data Analysis', 'Restricted', 'Monitored', 'All'], // Updated Tabs
+  [UserRole.AMS_ADMIN]: ['Data Analysis', 'Restricted', 'Monitored', 'All', 'AMS Audit'],
 };
 
 function App() {
   const [user, setUser] = useState<User | null>(null);
   const [data, setData] = useState<Prescription[]>([]);
+  const [auditData, setAuditData] = useState<AMSAudit[]>([]); 
   const [activeTab, setActiveTab] = useState('Pending');
   const [loading, setLoading] = useState(false);
   const [dbError, setDbError] = useState<string | null>(null);
@@ -76,13 +80,17 @@ function App() {
   const [pendingAction, setPendingAction] = useState<{id: number, type: ActionType} | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isWorkflowModalOpen, setIsWorkflowModalOpen] = useState(false);
-  const [isAntimicrobialRequestFormOpen, setIsAntimicrobialRequestFormOpen] = useState(false); // New state
+  const [isAntimicrobialRequestFormOpen, setIsAntimicrobialRequestFormOpen] = useState(false); 
+  
+  // Audit States
+  const [isAMSAuditFormOpen, setIsAMSAuditFormOpen] = useState(false);
+  const [selectedAuditToEdit, setSelectedAuditToEdit] = useState<AMSAudit | null>(null);
+  const [selectedAuditForView, setSelectedAuditForView] = useState<AMSAudit | null>(null);
 
   // Filters
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
 
-  // Realtime subscription setup
   useEffect(() => {
     if (user) {
       loadData();
@@ -98,9 +106,22 @@ function App() {
           }
         )
         .subscribe();
+      
+      let auditChannel: any;
+      if (user.role === UserRole.AMS_ADMIN) {
+          auditChannel = supabase
+            .channel('audits_changes')
+            .on(
+              'postgres_changes',
+              { event: '*', schema: 'public', table: 'audits' },
+              () => loadAudits()
+            )
+            .subscribe();
+      }
 
       return () => {
         supabase.removeChannel(channel);
+        if (auditChannel) supabase.removeChannel(auditChannel);
       };
     }
   }, [user]);
@@ -118,18 +139,35 @@ function App() {
     setLoading(false);
   };
 
+  const loadAudits = async () => {
+    const { data: result, error } = await fetchAudits();
+    if (error) {
+       console.error("Failed to load audits:", error);
+    } else {
+       setAuditData(result);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === 'AMS Audit' && user?.role === UserRole.AMS_ADMIN) {
+        loadAudits();
+    }
+  }, [activeTab, user]);
+
   const handleLogin = (loggedInUser: User) => {
     setUser(loggedInUser);
     if (loggedInUser.role === UserRole.IDS || loggedInUser.role === UserRole.PHARMACIST) {
       setActiveTab('Pending');
     } else {
       setActiveTab('Data Analysis');
+      loadAudits();
     }
   };
 
   const handleLogout = () => {
     setUser(null);
     setData([]);
+    setAuditData([]);
     setDbError(null);
   };
 
@@ -137,7 +175,14 @@ function App() {
     setSelectedItemForView(item);
   };
 
-  const handleActionClick = (id: number, type: ActionType) => {
+  const handleActionClick = (id: number, type: ActionType, payload?: any) => {
+    // If payload contains findings, it comes from DetailModal and we execute immediately
+    // Handle Save Findings explicitly too
+    if (payload?.findings && (type === ActionType.DISAPPROVE || type === ActionType.APPROVE || type === ActionType.SAVE_FINDINGS)) {
+        executeAction(id, type, { findings: payload.findings });
+        return;
+    }
+
     switch (type) {
       case ActionType.APPROVE:
       case ActionType.REVERSE_TO_APPROVE:
@@ -146,6 +191,7 @@ function App() {
       
       case ActionType.DISAPPROVE:
       case ActionType.REVERSE_TO_DISAPPROVE:
+        // Fallback to simple modal if action triggered from Table/Card without review details
         setPendingAction({ id, type });
         setIsDisapproveModalOpen(true);
         break;
@@ -182,20 +228,23 @@ function App() {
       const updates: { [key: string]: any } = {};
       let statusToUpdate: PrescriptionStatus | null = null;
       
-      // Default to setting dispenser for any action that isn't just "forward" or "delete"
-      // Pharmacist approves/disapproves: updates dispensed_by/date
-      // IDS approves/disapproves: updates ids_approved_at/ids_disapproved_at, but dispensed_by is already set by pharmacist who forwarded
-      if (type !== ActionType.FORWARD_IDS && type !== ActionType.DELETE) {
+      if (type !== ActionType.FORWARD_IDS && type !== ActionType.DELETE && type !== ActionType.SAVE_FINDINGS) {
         if (user.role === UserRole.PHARMACIST) {
           updates.dispensed_by = user.name;
         } else if (user.role === UserRole.IDS) {
-          // If IDS is taking action, set the specialist who reviewed
           updates.id_specialist = user.name;
         }
       }
       
       if (extraData?.disapprovedReason) {
         updates.disapproved_reason = extraData.disapprovedReason;
+      }
+      if (extraData?.findings) {
+        updates.findings = extraData.findings;
+        // Also copy consolidated text to disapproved_reason for backward compatibility if needed
+        if (type === ActionType.DISAPPROVE && !updates.disapproved_reason) {
+            updates.disapproved_reason = "See Review Findings";
+        }
       }
       
       switch (type) {
@@ -204,7 +253,7 @@ function App() {
           statusToUpdate = PrescriptionStatus.APPROVED;
           if (user.role === UserRole.IDS) {
             updates.ids_approved_at = new Date().toISOString();
-          } else { // Pharmacist
+          } else { 
             updates.dispensed_date = new Date().toISOString();
           }
           break;
@@ -213,21 +262,26 @@ function App() {
           statusToUpdate = PrescriptionStatus.DISAPPROVED;
           if (user.role === UserRole.IDS) {
             updates.ids_disapproved_at = new Date().toISOString();
-          } else { // Pharmacist
+          } else { 
             updates.dispensed_date = new Date().toISOString();
           }
           break;
         case ActionType.FORWARD_IDS:
           statusToUpdate = PrescriptionStatus.FOR_IDS_APPROVAL;
-          updates.dispensed_by = user.name; // Pharmacist forwarding
+          updates.dispensed_by = user.name; 
           updates.dispensed_date = new Date().toISOString();
           break;
         case ActionType.DELETE:
           statusToUpdate = PrescriptionStatus.DELETED;
           break;
+        case ActionType.SAVE_FINDINGS:
+          // No status change, just update findings
+          break;
       }
 
-      if (statusToUpdate) {
+      const shouldUpdate = statusToUpdate !== null || Object.keys(updates).length > 0;
+
+      if (shouldUpdate) {
         await updatePrescriptionStatus(id, statusToUpdate, updates);
       }
       
@@ -235,18 +289,13 @@ function App() {
     } catch (err: any) {
       const errorMessage = err.message || JSON.stringify(err);
       console.error("Action failed:", errorMessage);
-      alert(
-        `Error: Action could not be completed.\n\n` +
-        `This is often caused by Supabase Row Level Security (RLS) policies blocking the operation. ` +
-        `Please ensure you have policies that allow UPDATE and INSERT on the 'requests' table.\n\n` +
-        `Details: ${errorMessage}`
-      );
+      alert(`Error: Action could not be completed. Details: ${errorMessage}`);
       loadData();
     }
   };
 
   const handleNewRequestSubmit = async (formData: any) => {
-    if (!user) return; // Should not happen if initiated from NewRequestModal for logged-in users
+    if (!user) return; 
     setIsSubmitting(true);
     try {
       await createPrescription({ ...formData, status: PrescriptionStatus.PENDING, requested_by: user.name });
@@ -263,27 +312,14 @@ function App() {
   const handleFormSubmissionFromLogin = async (formData: any) => {
     setIsSubmitting(true);
     try {
-      await createPrescription({ ...formData }); // No requested_by if not logged in
+      await createPrescription({ ...formData }); 
       setIsAntimicrobialRequestFormOpen(false);
       alert("Antimicrobial Request submitted successfully!");
     } catch (err) {
       console.error("Failed to create request from login form", err);
-      alert("Failed to create request. Please check RLS policies in Supabase and ensure 'requested_by' can be null or a default value.");
+      alert("Failed to create request.");
     } finally {
       setIsSubmitting(false);
-    }
-  };
-
-
-  const handleSeed = async () => {
-    if (window.confirm("This will insert test data. Continue?")) {
-      const result = await seedDatabase();
-      if (result.success) {
-        alert("Data seeded successfully!");
-        loadData();
-      } else {
-        alert("Failed to seed data: " + result.error + "\n\nLikely cause: RLS or Missing Columns.");
-      }
     }
   };
 
@@ -292,14 +328,14 @@ function App() {
   };
 
   const getFilteredDataForCurrentView = () => {
+    // ... (Filter logic remains identical)
     const isIdsUnfilteredView = user?.role === UserRole.IDS && (activeTab === 'Approved Restricted' || activeTab === 'Disapproved Restricted');
     const isPendingView = activeTab === 'Pending';
     const isAmsAdminView = user?.role === UserRole.AMS_ADMIN;
     
     let items = data;
 
-    // Apply date filters unless it's Pending, or specific IDS unfiltered views, or AMS Data Analysis (which has its own filter)
-    if (!isPendingView && !isIdsUnfilteredView && !(isAmsAdminView && activeTab === 'Data Analysis')) {
+    if (!isPendingView && !isIdsUnfilteredView && !(isAmsAdminView && (activeTab === 'Data Analysis' || activeTab === 'AMS Audit'))) {
       items = items.filter(item => {
         const itemDate = item.req_date ? new Date(item.req_date) : new Date(item.created_at || Date.now());
         const monthMatch = selectedMonth === -1 || itemDate.getMonth() === selectedMonth;
@@ -327,10 +363,11 @@ function App() {
     
     if (user?.role === UserRole.AMS_ADMIN) {
       switch (activeTab) {
-        case 'Data Analysis': return data; // StatsChart handles its own filtering
+        case 'Data Analysis': return data; 
         case 'Restricted': return items.filter(i => i.drug_type === DrugType.RESTRICTED);
         case 'Monitored': return items.filter(i => i.drug_type === DrugType.MONITORED);
         case 'All': return items;
+        case 'AMS Audit': return []; 
       }
     }
 
@@ -338,11 +375,12 @@ function App() {
   };
   
   const FilterHeader = () => {
-    const showFilters = user?.role !== UserRole.AMS_ADMIN || activeTab !== 'Data Analysis'; // Filters are managed internally by StatsChart now
+    // ... (Same logic)
+    const showFilters = user?.role !== UserRole.AMS_ADMIN || (activeTab !== 'Data Analysis' && activeTab !== 'AMS Audit');
 
     if (!showFilters || activeTab === 'Pending' || 
         (user?.role === UserRole.IDS && (activeTab === 'Approved Restricted' || activeTab === 'Disapproved Restricted'))) {
-      return null; // Don't show global filters on these tabs
+      return null;
     }
 
     return (
@@ -363,6 +401,7 @@ function App() {
 
   const renderContent = () => {
     if (dbError) {
+      // ... (Error handling)
       const isColumnMissing = dbError.includes('column') && dbError.includes('does not exist');
       return (
         <div className="p-12 bg-white rounded-lg shadow-md border-l-4 border-red-500 my-8">
@@ -378,13 +417,42 @@ alter table requests add column if not exists dispensed_date timestamp with time
 alter table requests add column if not exists ids_approved_at timestamp with time zone;
 alter table requests add column if not exists ids_disapproved_at timestamp with time zone;
 alter table requests add column if not exists disapproved_reason text;
-alter table requests add column if not exists mode text;`}
+alter table requests add column if not exists mode text;
+alter table requests add column if not exists findings jsonb default '[]'::jsonb;`}
                   </pre>
               </div>
           )}
            <p className="text-center text-gray-600 mt-6">If you've added columns, try <button onClick={() => loadData()} className="text-blue-600 hover:underline">reloading data</button>.</p>
         </div>
       );
+    }
+
+    if (activeTab === 'AMS Audit' && user?.role === UserRole.AMS_ADMIN) {
+        return (
+            <div className="space-y-4">
+                <div className="flex justify-between items-center">
+                    <h2 className="text-2xl font-bold text-gray-800">AMS Audit Logs</h2>
+                    <button 
+                        onClick={() => {
+                            setSelectedAuditToEdit(null); 
+                            setIsAMSAuditFormOpen(true);
+                        }} 
+                        className="bg-green-600 text-white px-4 py-2 rounded-lg shadow hover:bg-green-700 font-medium text-sm flex items-center gap-2"
+                    >
+                         <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
+                         New Audit
+                    </button>
+                </div>
+                <AMSAuditTable 
+                    items={auditData} 
+                    onView={(audit) => setSelectedAuditForView(audit)}
+                    onEdit={(audit) => {
+                        setSelectedAuditToEdit(audit);
+                        setIsAMSAuditFormOpen(true);
+                    }}
+                />
+            </div>
+        );
     }
 
     const viewData = getFilteredDataForCurrentView();
@@ -427,13 +495,12 @@ alter table requests add column if not exists mode text;`}
       case 'For IDS Approval':
         return <PrescriptionTable items={viewData} onAction={handleActionClick} onView={handleViewDetails} statusType={PrescriptionStatus.FOR_IDS_APPROVAL} />;
 
-      // AMS ADMIN TABS
       case 'Data Analysis':
         return <StatsChart 
-                  data={data} // Pass full data for internal filtering by StatsChart
+                  data={data} 
                   allData={data} 
                   role={user?.role}
-                  selectedMonth={selectedMonth} // Still pass to keep App state in sync if needed
+                  selectedMonth={selectedMonth}
                   onMonthChange={setSelectedMonth}
                   selectedYear={selectedYear}
                   onYearChange={setSelectedYear} 
@@ -457,30 +524,54 @@ alter table requests add column if not exists mode text;`}
     }
   };
   
-  // Use tabsConfig here
-  const currentTabs = user ? tabsConfig[user.role] : tabsConfig[UserRole.PHARMACIST]; // Fallback for safety
+  const currentTabs = user ? tabsConfig[user.role] : tabsConfig[UserRole.PHARMACIST]; 
 
-  // Render WorkflowModal here so it's always in the DOM
   return (
     <>
       <WorkflowModal isOpen={isWorkflowModalOpen} onClose={() => setIsWorkflowModalOpen(false)} />
-      <AntimicrobialRequestForm // Render the new form here
+      <AntimicrobialRequestForm 
         isOpen={isAntimicrobialRequestFormOpen}
         onClose={() => setIsAntimicrobialRequestFormOpen(false)}
-        onSubmit={handleFormSubmissionFromLogin} // Use the new handler
+        onSubmit={handleFormSubmissionFromLogin}
         loading={isSubmitting}
+      />
+      
+      {/* Audit Form */}
+      <AMSAuditForm 
+        isOpen={isAMSAuditFormOpen}
+        initialData={selectedAuditToEdit}
+        onClose={() => {
+            setIsAMSAuditFormOpen(false);
+            setSelectedAuditToEdit(null); 
+            if (user?.role === UserRole.AMS_ADMIN) loadAudits();
+        }}
+      />
+
+      {/* Audit Detail Modal */}
+      <AMSAuditDetailModal
+        isOpen={!!selectedAuditForView}
+        onClose={() => setSelectedAuditForView(null)}
+        audit={selectedAuditForView}
+        onEdit={(audit) => {
+            setSelectedAuditToEdit(audit);
+            setIsAMSAuditFormOpen(true);
+        }}
+        onSave={loadAudits} 
       />
 
       {!user ? (
         <Login 
           onLogin={handleLogin} 
           onOpenWorkflow={() => setIsWorkflowModalOpen(true)} 
-          onOpenAntimicrobialRequestForm={() => setIsAntimicrobialRequestFormOpen(true)} // New prop
+          onOpenAntimicrobialRequestForm={() => setIsAntimicrobialRequestFormOpen(true)}
+          onOpenAuditForm={() => {
+              setSelectedAuditToEdit(null);
+              setIsAMSAuditFormOpen(true);
+          }}
         />
       ) : (
         <Layout user={user} onLogout={handleLogout}>
           <PasswordModal isOpen={isPasswordModalOpen} onClose={() => setIsPasswordModalOpen(false)} onConfirm={handleConfirmPassword} />
-          {/* NewRequestModal is still used by logged-in pharmacists */}
           <NewRequestModal isOpen={isNewRequestModalOpen} onClose={() => setIsNewRequestModalOpen(false)} onSubmit={handleNewRequestSubmit} loading={isSubmitting} />
           <DisapproveModal isOpen={isDisapproveModalOpen} onClose={() => setIsDisapproveModalOpen(false)} onSubmit={handleDisapproveSubmit} loading={isSubmitting} />
           <DetailModal isOpen={!!selectedItemForView} onClose={() => setSelectedItemForView(null)} item={selectedItemForView} role={user.role} onAction={handleActionClick} />
@@ -493,7 +584,7 @@ alter table requests add column if not exists mode text;`}
             </nav>
           </div>
           
-          {FilterHeader()} {/* Call FilterHeader as a function to render */}
+          {FilterHeader()}
           {renderContent()}
         </Layout>
       )}
