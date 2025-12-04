@@ -10,7 +10,8 @@ import NewRequestModal from './components/NewRequestModal';
 import DetailModal from './components/DetailModal';
 import DisapproveModal from './components/DisapproveModal';
 import ChartDetailModal from './components/ChartDetailModal';
-import UserManualModal from './components/UserManualModal'; 
+import UserManualModal from './components/UserManualModal';
+import WorkflowModal from './components/WorkflowModal'; 
 import AntimicrobialRequestForm from './components/AntimicrobialRequestForm'; 
 import AMSAuditForm from './components/AMSAuditForm'; 
 import AMSAuditTable from './components/AMSAuditTable'; 
@@ -80,6 +81,7 @@ function App() {
   const [pendingAction, setPendingAction] = useState<{id: number, type: ActionType} | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isUserManualOpen, setIsUserManualOpen] = useState(false);
+  const [isWorkflowModalOpen, setIsWorkflowModalOpen] = useState(false);
   const [isAntimicrobialRequestFormOpen, setIsAntimicrobialRequestFormOpen] = useState(false); 
   
   // Audit States
@@ -529,6 +531,8 @@ alter table requests add column if not exists findings jsonb default '[]'::jsonb
   return (
     <>
       <UserManualModal isOpen={isUserManualOpen} onClose={() => setIsUserManualOpen(false)} />
+      <WorkflowModal isOpen={isWorkflowModalOpen} onClose={() => setIsWorkflowModalOpen(false)} />
+      
       <AntimicrobialRequestForm 
         isOpen={isAntimicrobialRequestFormOpen}
         onClose={() => setIsAntimicrobialRequestFormOpen(false)}
@@ -559,6 +563,7 @@ alter table requests add column if not exists findings jsonb default '[]'::jsonb
         <Login 
           onLogin={handleLogin} 
           onOpenManual={() => setIsUserManualOpen(true)} 
+          onOpenWorkflow={() => setIsWorkflowModalOpen(true)}
           onOpenAntimicrobialRequestForm={() => setIsAntimicrobialRequestFormOpen(true)}
           onOpenAuditForm={() => {
               setSelectedAuditToEdit(null);
