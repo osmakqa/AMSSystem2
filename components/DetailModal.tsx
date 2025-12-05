@@ -288,7 +288,7 @@ const DetailModal: React.FC<DetailModalProps> = ({ isOpen, onClose, item, role, 
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 p-4 animate-fade-in backdrop-blur-sm" onClick={onClose}>
+    <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-[100] p-4 animate-fade-in backdrop-blur-sm" onClick={onClose}>
       <div className={`bg-white rounded-xl shadow-2xl w-full h-[90vh] flex flex-col border border-gray-200 overflow-hidden ${isReviewer ? 'max-w-[95vw]' : 'max-w-4xl'}`} onClick={(e) => e.stopPropagation()}>
         
         {/* Header */}
@@ -411,7 +411,7 @@ const DetailModal: React.FC<DetailModalProps> = ({ isOpen, onClose, item, role, 
                                     <div key={idx} className="bg-red-50 border-l-4 border-red-400 p-3 rounded-md shadow-sm relative group">
                                         <button 
                                             onClick={() => removeFinding(f.id)}
-                                            className="absolute top-2 right-2 text-red-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                                            className="absolute top-2 right-2 text-red-300 hover:text-red-50 opacity-0 group-hover:opacity-100 transition-opacity"
                                         >
                                             &times;
                                         </button>

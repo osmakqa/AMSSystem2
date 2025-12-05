@@ -24,7 +24,6 @@ import {
 } from './services/dataService';
 import { supabase } from './services/supabaseClient';
 
-// ... (FilterControls and tabsConfig remain same)
 const FilterControls = ({ selectedMonth, onMonthChange, selectedYear, onYearChange }: any) => {
   const months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
   const currentYear = new Date().getFullYear();
@@ -62,6 +61,7 @@ const tabsConfig: Record<UserRole, string[]> = {
   [UserRole.PHARMACIST]: ['Pending', 'Approved', 'Disapproved', 'For IDS Approval'],
   [UserRole.IDS]: ['Pending', 'Approved Restricted', 'Disapproved Restricted'],
   [UserRole.AMS_ADMIN]: ['Data Analysis', 'Restricted', 'Monitored', 'All', 'AMS Audit'],
+  [UserRole.RESIDENT]: ['Disapproved'],
 };
 
 function App() {
@@ -77,11 +77,14 @@ function App() {
   const [isNewRequestModalOpen, setIsNewRequestModalOpen] = useState(false);
   const [isDisapproveModalOpen, setIsDisapproveModalOpen] = useState(false);
   const [selectedItemForView, setSelectedItemForView] = useState<Prescription | null>(null);
-  const [pendingAction, setPendingAction] = useState<{id: number, type: ActionType} | null>(null);
+  const [pendingAction, setPendingAction] = useState<{id: number, type: ActionType, payload?: any} | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isUserManualOpen, setIsUserManualOpen] = useState(false);
   const [isWorkflowModalOpen, setIsWorkflowModalOpen] = useState(false);
-  const [isAntimicrobialRequestFormOpen, setIsAntimicrobialRequestFormOpen] = useState(false); 
+  const [isAntimicrobialRequestFormOpen, setIsAntimicrobialRequestFormOpen] = useState(false);
+  
+  // Edit State for Residents
+  const [requestToEdit, setRequestToEdit] = useState<Prescription | null>(null);
   
   // Audit States
   const [isAMSAuditFormOpen, setIsAMSAuditFormOpen] = useState(false);
@@ -151,8 +154,6 @@ function App() {
 
   useEffect(() => {
     if (user?.role === UserRole.AMS_ADMIN) {
-        // Load audits when AMS admin logs in, regardless of active tab initially, 
-        // to populate the Data Analysis tab immediately
         loadAudits();
     }
   }, [user]);
@@ -161,9 +162,10 @@ function App() {
     setUser(loggedInUser);
     if (loggedInUser.role === UserRole.IDS || loggedInUser.role === UserRole.PHARMACIST) {
       setActiveTab('Pending');
+    } else if (loggedInUser.role === UserRole.RESIDENT) {
+      setActiveTab('Disapproved');
     } else {
       setActiveTab('Data Analysis');
-      // Audits loaded via useEffect above
     }
   };
 
@@ -180,21 +182,30 @@ function App() {
 
   const handleActionClick = (id: number, type: ActionType, payload?: any) => {
     // If payload contains findings, it comes from DetailModal and we execute immediately
-    // Handle Save Findings explicitly too
     if (payload?.findings && (type === ActionType.DISAPPROVE || type === ActionType.APPROVE || type === ActionType.SAVE_FINDINGS)) {
         executeAction(id, type, { findings: payload.findings });
+        return;
+    }
+
+    // Special handling for Residents Editing
+    if (type === ActionType.RESEND && payload?.isEditing) {
+        const itemToEdit = data.find(i => i.id === id);
+        if (itemToEdit) {
+            setRequestToEdit(itemToEdit);
+            setIsAntimicrobialRequestFormOpen(true);
+        }
         return;
     }
 
     switch (type) {
       case ActionType.APPROVE:
       case ActionType.REVERSE_TO_APPROVE:
+      case ActionType.RESEND: // Direct resend without edit
         executeAction(id, type);
         break;
       
       case ActionType.DISAPPROVE:
       case ActionType.REVERSE_TO_DISAPPROVE:
-        // Fallback to simple modal if action triggered from Table/Card without review details
         setPendingAction({ id, type });
         setIsDisapproveModalOpen(true);
         break;
@@ -214,6 +225,22 @@ function App() {
     setPendingAction(null);
   };
 
+  const getCurrentUserPassword = (user: User | null) => {
+    if (!user) return 'osmak123';
+    if (user.role === UserRole.AMS_ADMIN) return 'ams123';
+    if (user.role === UserRole.RESIDENT) return 'doctor123';
+    if (user.role === UserRole.PHARMACIST) {
+      const lastName = user.name.split(',')[0].trim().toLowerCase();
+      return `${lastName}123`;
+    }
+    if (user.role === UserRole.IDS) {
+      const parts = user.name.trim().split(' ');
+      const lastName = parts[parts.length - 1].toLowerCase();
+      return `${lastName}456`;
+    }
+    return 'osmak123';
+  };
+
   const handleDisapproveSubmit = async (reason: string, details: string) => {
     if (!pendingAction) return;
     setIsSubmitting(true);
@@ -231,7 +258,7 @@ function App() {
       const updates: { [key: string]: any } = {};
       let statusToUpdate: PrescriptionStatus | null = null;
       
-      if (type !== ActionType.FORWARD_IDS && type !== ActionType.DELETE && type !== ActionType.SAVE_FINDINGS) {
+      if (type !== ActionType.FORWARD_IDS && type !== ActionType.DELETE && type !== ActionType.SAVE_FINDINGS && type !== ActionType.RESEND) {
         if (user.role === UserRole.PHARMACIST) {
           updates.dispensed_by = user.name;
         } else if (user.role === UserRole.IDS) {
@@ -244,7 +271,6 @@ function App() {
       }
       if (extraData?.findings) {
         updates.findings = extraData.findings;
-        // Also copy consolidated text to disapproved_reason for backward compatibility if needed
         if (type === ActionType.DISAPPROVE && !updates.disapproved_reason) {
             updates.disapproved_reason = "See Review Findings";
         }
@@ -277,8 +303,15 @@ function App() {
         case ActionType.DELETE:
           statusToUpdate = PrescriptionStatus.DELETED;
           break;
+        case ActionType.RESEND:
+          statusToUpdate = PrescriptionStatus.PENDING;
+          // Clear approval/disapproval fields
+          updates.ids_approved_at = null;
+          updates.ids_disapproved_at = null;
+          updates.dispensed_date = null;
+          updates.disapproved_reason = null; // Clear previous rejection reason
+          break;
         case ActionType.SAVE_FINDINGS:
-          // No status change, just update findings
           break;
       }
 
@@ -312,15 +345,27 @@ function App() {
     }
   };
 
+  // Handles both Create (from Login or Resident Edit) and Update
   const handleFormSubmissionFromLogin = async (formData: any) => {
     setIsSubmitting(true);
     try {
-      await createPrescription({ ...formData }); 
+      if (formData.id) {
+          // This is an update/resend from the Resident module
+          await updatePrescriptionStatus(formData.id, PrescriptionStatus.PENDING, formData);
+          alert("Request Updated and Resent successfully!");
+      } else {
+          // New submission
+          await createPrescription({ ...formData }); 
+          alert("Antimicrobial Request submitted successfully!");
+      }
+      
       setIsAntimicrobialRequestFormOpen(false);
-      alert("Antimicrobial Request submitted successfully!");
+      setRequestToEdit(null); // Clear edit state
+      loadData(); // Refresh data if logged in
     } catch (err) {
       console.error("Failed to create request from login form", err);
-      alert("Failed to create request.");
+      const msg = err instanceof Error ? err.message : JSON.stringify(err);
+      alert(`Failed to submit request: ${msg}`);
     } finally {
       setIsSubmitting(false);
     }
@@ -335,9 +380,14 @@ function App() {
     const isPendingView = activeTab === 'Pending';
     const isAmsAdminView = user?.role === UserRole.AMS_ADMIN;
     
+    // Resident View Filter: Only Disapproved, filtered by Month/Year
+    const isResidentView = user?.role === UserRole.RESIDENT;
+    
     let items = data;
 
-    if (!isPendingView && !isIdsUnfilteredView && !(isAmsAdminView && (activeTab === 'Data Analysis' || activeTab === 'AMS Audit'))) {
+    // Apply date filtering for everyone EXCEPT Pending tab or specific admin views
+    // For Residents, we ALWAYS apply the date filter to their disapproved list
+    if (isResidentView || (!isPendingView && !isIdsUnfilteredView && !(isAmsAdminView && (activeTab === 'Data Analysis' || activeTab === 'AMS Audit')))) {
       items = items.filter(item => {
         const itemDate = item.req_date ? new Date(item.req_date) : new Date(item.created_at || Date.now());
         const monthMatch = selectedMonth === -1 || itemDate.getMonth() === selectedMonth;
@@ -349,15 +399,10 @@ function App() {
     if (user?.role === UserRole.PHARMACIST) {
       switch (activeTab) {
         case 'Pending': 
-          // Show all pending requests so Pharmacist can triage them
           return items.filter(i => statusMatches(i.status, PrescriptionStatus.PENDING));
         case 'Approved': 
-          // Only show MONITORED drugs that are APPROVED in this tab
           return items.filter(i => statusMatches(i.status, PrescriptionStatus.APPROVED) && i.drug_type === DrugType.MONITORED);
         case 'Disapproved': 
-          // Show MONITORED drugs that are DISAPPROVED
-          // AND Restricted drugs disapproved by Pharmacist (not IDS)
-          // We check !i.ids_disapproved_at to confirm it wasn't the IDS who rejected it
           return items.filter(i => 
             statusMatches(i.status, PrescriptionStatus.DISAPPROVED) && 
             (i.drug_type === DrugType.MONITORED || (i.drug_type === DrugType.RESTRICTED && !i.ids_disapproved_at))
@@ -385,15 +430,26 @@ function App() {
       }
     }
 
+    if (user?.role === UserRole.RESIDENT) {
+        if (activeTab === 'Disapproved') {
+            return items.filter(i => statusMatches(i.status, PrescriptionStatus.DISAPPROVED));
+        }
+    }
+
     return items;
   };
   
   const FilterHeader = () => {
-    // ... (Same logic)
-    const showFilters = user?.role !== UserRole.AMS_ADMIN || (activeTab !== 'Data Analysis' && activeTab !== 'AMS Audit');
+    // Show filters for:
+    // 1. Pharmacist/IDS History tabs (non-Pending)
+    // 2. AMS Admin Lists (non-Analysis/Audit)
+    // 3. Resident View (Always)
+    
+    const showFilters = user?.role === UserRole.RESIDENT || 
+        (user?.role !== UserRole.AMS_ADMIN && activeTab !== 'Pending') ||
+        (user?.role === UserRole.AMS_ADMIN && (activeTab !== 'Data Analysis' && activeTab !== 'AMS Audit'));
 
-    if (!showFilters || activeTab === 'Pending' || 
-        (user?.role === UserRole.IDS && (activeTab === 'Approved Restricted' || activeTab === 'Disapproved Restricted'))) {
+    if (!showFilters) {
       return null;
     }
 
@@ -415,30 +471,12 @@ function App() {
 
   const renderContent = () => {
     if (dbError) {
-      // ... (Error handling)
+      // ... error handling code ...
       const isColumnMissing = dbError.includes('column') && dbError.includes('does not exist');
       return (
         <div className="p-12 bg-white rounded-lg shadow-md border-l-4 border-red-500 my-8">
           <h3 className="text-lg font-bold text-gray-800 mb-2">Database Error</h3>
           <p className="bg-red-50 p-4 rounded border border-red-100 font-mono text-sm break-words">{dbError}</p>
-          {isColumnMissing && (
-              <div className="bg-gray-800 p-4 rounded text-xs font-mono w-full max-w-2xl overflow-x-auto mt-6">
-                  <p className="text-green-400 mb-2 font-sans font-bold uppercase tracking-wide">SQL to Fix Missing Columns:</p>
-                  <pre className="text-gray-300 whitespace-pre-wrap">
-{`-- Run these in your Supabase SQL Editor:
-alter table requests add column if not exists dispensed_by text;
-alter table requests add column if not exists dispensed_date timestamp with time zone;
-alter table requests add column if not exists ids_approved_at timestamp with time zone;
-alter table requests add column if not exists ids_disapproved_at timestamp with time zone;
-alter table requests add column if not exists disapproved_reason text;
-alter table requests add column if not exists mode text;
-alter table requests add column if not exists findings jsonb default '[]'::jsonb;
-alter table audits add column if not exists audit_findings jsonb default '[]'::jsonb;
-alter table audits add column if not exists general_audit_note text;
-`}
-                  </pre>
-              </div>
-          )}
            <p className="text-center text-gray-600 mt-6">If you've added columns, try <button onClick={() => loadData()} className="text-blue-600 hover:underline">reloading data</button>.</p>
         </div>
       );
@@ -485,22 +523,27 @@ alter table audits add column if not exists general_audit_note text;
     
     if (loading) return <div className="text-center p-20 text-gray-500">Loading records...</div>;
 
-    switch(activeTab) {
-      case 'Pending':
+    // View Switching
+    
+    // Pharmacist Pending OR Resident Disapproved Cards View
+    if (activeTab === 'Pending' || (user?.role === UserRole.RESIDENT && activeTab === 'Disapproved')) {
+        const title = activeTab === 'Pending' ? `Pending Requests (${viewData.length})` : `Disapproved Requests (${viewData.length})`;
         return (
           <div>
              <div className="flex justify-between items-center mb-6">
-              <h2 className="text-2xl font-bold text-gray-800">Pending Requests ({viewData.length})</h2>
+              <h2 className="text-2xl font-bold text-gray-800">{title}</h2>
               {user?.role === UserRole.PHARMACIST && <button onClick={() => setIsNewRequestModalOpen(true)} className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded shadow text-sm font-medium">New Request</button>}
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {viewData.length === 0 ? <p className="col-span-full text-center py-10 bg-white rounded-lg">No items requiring review.</p> : viewData.map(item => (
+              {viewData.length === 0 ? <p className="col-span-full text-center py-10 bg-white rounded-lg">No items found.</p> : viewData.map(item => (
                 <PrescriptionCard key={item.id} item={item} role={user!.role} onAction={handleActionClick} onView={handleViewDetails} />
               ))}
             </div>
           </div>
         );
-      
+    }
+
+    switch(activeTab) {
       case 'Approved':
       case 'Approved Restricted':
         return <PrescriptionTable items={viewData} onAction={handleActionClick} onView={handleViewDetails} statusType={PrescriptionStatus.APPROVED} />;
@@ -516,7 +559,7 @@ alter table audits add column if not exists general_audit_note text;
         return <StatsChart 
                   data={data} 
                   allData={data}
-                  auditData={auditData} // Passed audit data here
+                  auditData={auditData}
                   role={user?.role}
                   selectedMonth={selectedMonth}
                   onMonthChange={setSelectedMonth}
@@ -551,9 +594,13 @@ alter table audits add column if not exists general_audit_note text;
       
       <AntimicrobialRequestForm 
         isOpen={isAntimicrobialRequestFormOpen}
-        onClose={() => setIsAntimicrobialRequestFormOpen(false)}
+        onClose={() => {
+            setIsAntimicrobialRequestFormOpen(false);
+            setRequestToEdit(null); // Clear editing state on close
+        }}
         onSubmit={handleFormSubmissionFromLogin}
         loading={isSubmitting}
+        initialData={requestToEdit} // Pass editing data
       />
       
       {/* Audit Form */}
@@ -580,7 +627,10 @@ alter table audits add column if not exists general_audit_note text;
           onLogin={handleLogin} 
           onOpenManual={() => setIsUserManualOpen(true)} 
           onOpenWorkflow={() => setIsWorkflowModalOpen(true)}
-          onOpenAntimicrobialRequestForm={() => setIsAntimicrobialRequestFormOpen(true)}
+          onOpenAntimicrobialRequestForm={() => {
+              setRequestToEdit(null);
+              setIsAntimicrobialRequestFormOpen(true);
+          }}
           onOpenAuditForm={() => {
               setSelectedAuditToEdit(null);
               setIsAMSAuditFormOpen(true);
@@ -588,7 +638,12 @@ alter table audits add column if not exists general_audit_note text;
         />
       ) : (
         <Layout user={user} onLogout={handleLogout}>
-          <PasswordModal isOpen={isPasswordModalOpen} onClose={() => setIsPasswordModalOpen(false)} onConfirm={handleConfirmPassword} />
+          <PasswordModal 
+            isOpen={isPasswordModalOpen} 
+            onClose={() => setIsPasswordModalOpen(false)} 
+            onConfirm={handleConfirmPassword} 
+            expectedPassword={getCurrentUserPassword(user)} // Pass user-specific password
+          />
           <NewRequestModal isOpen={isNewRequestModalOpen} onClose={() => setIsNewRequestModalOpen(false)} onSubmit={handleNewRequestSubmit} loading={isSubmitting} />
           <DisapproveModal isOpen={isDisapproveModalOpen} onClose={() => setIsDisapproveModalOpen(false)} onSubmit={handleDisapproveSubmit} loading={isSubmitting} />
           <DetailModal isOpen={!!selectedItemForView} onClose={() => setSelectedItemForView(null)} item={selectedItemForView} role={user.role} onAction={handleActionClick} />

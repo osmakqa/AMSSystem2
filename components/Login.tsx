@@ -1,6 +1,5 @@
-
-import React, { useState } from 'react';
-import { PHARMACISTS, IDS_SPECIALISTS, DEFAULT_PASSWORD, LOGO_URL } from '../constants';
+import React, { useState, useMemo } from 'react';
+import { PHARMACISTS, IDS_SPECIALISTS, LOGO_URL } from '../constants';
 import { User, UserRole } from '../types';
 
 interface LoginProps {
@@ -12,16 +11,50 @@ interface LoginProps {
 }
 
 const Login: React.FC<LoginProps> = ({ onLogin, onOpenManual, onOpenWorkflow, onOpenAntimicrobialRequestForm, onOpenAuditForm }) => {
-  const [role, setRole] = useState<'PHARMACIST' | 'IDS' | 'AMS'>('PHARMACIST');
+  const [role, setRole] = useState<'PHARMACIST' | 'IDS' | 'AMS' | 'RESIDENT'>('PHARMACIST');
   const [selectedUser, setSelectedUser] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+
+  const getExpectedPassword = () => {
+    if (role === 'AMS') return 'ams123';
+    if (role === 'RESIDENT') return 'doctor123';
+    
+    if (role === 'PHARMACIST' && selectedUser) {
+      // Format: "Abello, Corazon L." -> "abello123"
+      const lastName = selectedUser.split(',')[0].trim().toLowerCase();
+      return `${lastName}123`;
+    }
+    
+    if (role === 'IDS' && selectedUser) {
+      // Format: "Dr. Christopher John Tibayan" -> "tibayan456"
+      const parts = selectedUser.trim().split(' ');
+      const lastName = parts[parts.length - 1].toLowerCase();
+      return `${lastName}456`;
+    }
+    
+    return '';
+  };
+
+  const getPasswordHint = () => {
+    if (role === 'AMS') return 'Hint: ams123';
+    if (role === 'RESIDENT') return 'Hint: doctor123';
+    if (role === 'PHARMACIST') return 'Hint: surname123 (lowercase)';
+    if (role === 'IDS') return 'Hint: surname456 (lowercase)';
+    return '';
+  };
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
 
-    if (password !== DEFAULT_PASSWORD) {
+    if (role !== 'AMS' && role !== 'RESIDENT' && !selectedUser) {
+        setError('Please select a user');
+        return;
+    }
+
+    const expected = getExpectedPassword();
+    if (password !== expected) {
       setError('Incorrect password');
       return;
     }
@@ -31,9 +64,9 @@ const Login: React.FC<LoginProps> = ({ onLogin, onOpenManual, onOpenWorkflow, on
       return;
     }
 
-    if (!selectedUser) {
-      setError('Please select a user');
-      return;
+    if (role === 'RESIDENT') {
+       onLogin({ id: 'resident', name: 'Resident', role: UserRole.RESIDENT });
+       return;
     }
 
     onLogin({ 
@@ -58,33 +91,40 @@ const Login: React.FC<LoginProps> = ({ onLogin, onOpenManual, onOpenWorkflow, on
         {/* Form Body */}
         <div className="p-8">
           {/* Role Selection Tabs */}
-          <div className="flex bg-gray-100 p-1 rounded-lg mb-6">
+          <div className="flex bg-gray-100 p-1 rounded-lg mb-6 overflow-x-auto">
             <button 
               type="button"
-              className={`flex-1 py-2 text-sm font-medium rounded-md transition-colors ${role === 'PHARMACIST' ? 'bg-white text-gray-800 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+              className={`flex-1 py-2 px-2 text-xs md:text-sm font-medium rounded-md transition-colors whitespace-nowrap ${role === 'PHARMACIST' ? 'bg-white text-gray-800 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
               onClick={() => { setRole('PHARMACIST'); setSelectedUser(''); }}
             >
               Pharmacist
             </button>
             <button 
               type="button"
-              className={`flex-1 py-2 text-sm font-medium rounded-md transition-colors ${role === 'IDS' ? 'bg-white text-gray-800 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+              className={`flex-1 py-2 px-2 text-xs md:text-sm font-medium rounded-md transition-colors whitespace-nowrap ${role === 'IDS' ? 'bg-white text-gray-800 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
               onClick={() => { setRole('IDS'); setSelectedUser(''); }}
             >
               IDS
             </button>
              <button 
               type="button"
-              className={`flex-1 py-2 text-sm font-medium rounded-md transition-colors ${role === 'AMS' ? 'bg-white text-gray-800 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+              className={`flex-1 py-2 px-2 text-xs md:text-sm font-medium rounded-md transition-colors whitespace-nowrap ${role === 'AMS' ? 'bg-white text-gray-800 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
               onClick={() => { setRole('AMS'); setSelectedUser('Admin'); }}
             >
               AMS
+            </button>
+            <button 
+              type="button"
+              className={`flex-1 py-2 px-2 text-xs md:text-sm font-medium rounded-md transition-colors whitespace-nowrap ${role === 'RESIDENT' ? 'bg-white text-gray-800 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+              onClick={() => { setRole('RESIDENT'); setSelectedUser('Resident'); }}
+            >
+              Resident
             </button>
           </div>
 
           <form onSubmit={handleLogin} className="space-y-6">
             {/* User Select */}
-            {role !== 'AMS' && (
+            {(role === 'PHARMACIST' || role === 'IDS') && (
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Select {role === 'IDS' ? 'Specialist' : 'Section User'}
@@ -107,17 +147,17 @@ const Login: React.FC<LoginProps> = ({ onLogin, onOpenManual, onOpenWorkflow, on
               </div>
             )}
 
-            {/* Password */}
+            {/* Password Field */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Password</label>
-              <input
-                type="password"
-                className="appearance-none block w-full px-3 py-3 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-green-500 focus:border-green-500 sm:text-sm bg-white text-black"
-                placeholder="••••••••"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-              />
-              <p className="mt-2 text-xs text-gray-500 italic">Hint: Use <span className="font-semibold">osmak123</span></p>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Password</label>
+                <input
+                    type="password"
+                    className="appearance-none block w-full px-3 py-3 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-green-500 focus:border-green-500 sm:text-sm bg-white text-black"
+                    placeholder="••••••••"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                />
+                <p className="mt-2 text-xs text-gray-500 italic">{getPasswordHint()}</p>
             </div>
 
             {error && <div className="text-red-500 text-sm text-center font-medium">{error}</div>}
@@ -177,15 +217,17 @@ const Login: React.FC<LoginProps> = ({ onLogin, onOpenManual, onOpenWorkflow, on
                     </svg>
                     View System Workflow
                  </button>
-                 <button 
-                   className="flex items-center justify-center w-full text-green-700 text-sm font-medium hover:underline gap-2 py-1"
-                   onClick={onOpenManual}
-                 >
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-                    </svg>
-                    View User Manual
-                 </button>
+                 <div className="flex flex-col gap-1 mt-2">
+                    <button 
+                        className="flex items-center justify-center w-full text-green-700 text-sm font-medium hover:underline gap-2 py-1"
+                        onClick={onOpenManual}
+                    >
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                        </svg>
+                        View User Manual
+                    </button>
+                 </div>
              </div>
            </div>
         </div>

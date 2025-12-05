@@ -1,8 +1,8 @@
-
 export enum UserRole {
   PHARMACIST = 'PHARMACIST',
   IDS = 'IDS',
-  AMS_ADMIN = 'AMS_ADMIN'
+  AMS_ADMIN = 'AMS_ADMIN',
+  RESIDENT = 'RESIDENT'
 }
 
 export interface User {
@@ -31,7 +31,8 @@ export enum ActionType {
   DELETE = 'DELETE',
   REVERSE_TO_APPROVE = 'REVERSE_TO_APPROVE',
   REVERSE_TO_DISAPPROVE = 'REVERSE_TO_DISAPPROVE',
-  SAVE_FINDINGS = 'SAVE_FINDINGS'
+  SAVE_FINDINGS = 'SAVE_FINDINGS',
+  RESEND = 'RESEND'
 }
 
 export interface RequestFinding {

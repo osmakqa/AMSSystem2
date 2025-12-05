@@ -1,14 +1,20 @@
 import React, { useState } from 'react';
-import { DEFAULT_PASSWORD } from '../constants';
 
 interface PasswordModalProps {
   isOpen: boolean;
   onClose: () => void;
   onConfirm: () => void;
   title?: string;
+  expectedPassword?: string;
 }
 
-const PasswordModal: React.FC<PasswordModalProps> = ({ isOpen, onClose, onConfirm, title = "Confirm Action" }) => {
+const PasswordModal: React.FC<PasswordModalProps> = ({ 
+  isOpen, 
+  onClose, 
+  onConfirm, 
+  title = "Confirm Action",
+  expectedPassword = "osmak123" // Fallback default
+}) => {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
 
@@ -16,7 +22,7 @@ const PasswordModal: React.FC<PasswordModalProps> = ({ isOpen, onClose, onConfir
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (password === DEFAULT_PASSWORD) {
+    if (password === expectedPassword) {
       onConfirm();
       onClose();
       setPassword('');
