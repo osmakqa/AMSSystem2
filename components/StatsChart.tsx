@@ -119,7 +119,7 @@ const FilterControls = ({ selectedMonth, onMonthChange, selectedYear, onYearChan
 
 
 // --- Main Component ---
-const StatsChart: React.FC<StatsChartProps> = ({ data, allData, auditData = [], selectedMonth, onMonthChange, selectedYear, onYearChange }) => {
+const StatsChart: React.FC<StatsChartProps> = ({ data, allData, auditData = [], role, selectedMonth, onMonthChange, selectedYear, onYearChange }) => {
   const [activeTab, setActiveTab] = useState('General');
   const [modeFilter, setModeFilter] = useState<'All' | 'adult' | 'pediatric'>('All');
   const [modalConfig, setModalConfig] = useState<{ isOpen: boolean; data: Prescription[]; title: string }>({ isOpen: false, data: [], title: '' });
@@ -197,8 +197,12 @@ const StatsChart: React.FC<StatsChartProps> = ({ data, allData, auditData = [], 
     // Subsets
     const restrictedData = source.filter(d => d.drug_type === DrugType.RESTRICTED);
     const monitoredData = source.filter(d => d.drug_type === DrugType.MONITORED);
-    const pharmacyHandled = source.filter(d => PHARMACISTS.includes(d.requested_by)); // simplified
-    const idsHandled = source.filter(d => IDS_SPECIALISTS.includes(d.dispensed_by || ''));
+    
+    // FIX: Filter by dispensed_by for Pharmacists (not requested_by)
+    const pharmacyHandled = source.filter(d => d.dispensed_by && PHARMACISTS.includes(d.dispensed_by)); 
+    
+    // FIX: Filter by id_specialist for IDS (not dispensed_by)
+    const idsHandled = source.filter(d => d.id_specialist && IDS_SPECIALISTS.includes(d.id_specialist));
     
     // General
     const approvedItems = source.filter(i => i.status === PrescriptionStatus.APPROVED);
@@ -208,9 +212,11 @@ const StatsChart: React.FC<StatsChartProps> = ({ data, allData, auditData = [], 
     // Pharmacy
     const pharmacistTimes = source.filter(i => i.dispensed_date && i.created_at).map(i => new Date(i.dispensed_date!).getTime() - new Date(i.created_at!).getTime());
     const avgPharmacistTime = pharmacistTimes.length > 0 ? formatDuration(pharmacistTimes.reduce((a, b) => a + b, 0) / pharmacistTimes.length) : 'N/A';
+    
     const pharmacistDecisions = [
-        { name: 'Approved Monitored', value: pharmacyHandled.filter(p => p.drug_type === DrugType.MONITORED && p.status === PrescriptionStatus.APPROVED).length },
-        { name: 'Forwarded Restricted', value: pharmacyHandled.filter(p => p.drug_type === DrugType.RESTRICTED && p.status === PrescriptionStatus.FOR_IDS_APPROVAL).length },
+        { name: 'Approved', value: pharmacyHandled.filter(p => p.status === PrescriptionStatus.APPROVED).length },
+        { name: 'Disapproved', value: pharmacyHandled.filter(p => p.status === PrescriptionStatus.DISAPPROVED && !p.ids_disapproved_at).length }, // Disapproved by RPh, not IDS
+        { name: 'Forwarded', value: pharmacyHandled.filter(p => p.status === PrescriptionStatus.FOR_IDS_APPROVAL || (p.drug_type === DrugType.RESTRICTED && (p.ids_approved_at || p.ids_disapproved_at))).length },
     ];
     
     // IDS
@@ -222,7 +228,7 @@ const StatsChart: React.FC<StatsChartProps> = ({ data, allData, auditData = [], 
       { name: 'Disapproved', value: idsHandled.filter(i => i.status === PrescriptionStatus.DISAPPROVED).length }
     ];
     
-    // Pharmacy Intervention Findings (New)
+    // ... interventionStats logic ...
     const getFindingsDistribution = (items: Prescription[]) => {
         const counts: Record<string, number> = {};
         items.forEach(item => {
@@ -238,10 +244,10 @@ const StatsChart: React.FC<StatsChartProps> = ({ data, allData, auditData = [], 
     const interventionStats = getFindingsDistribution(source);
 
     const avgTimePerIds = Object.entries(idsConsults.reduce((acc, curr) => {
-        if (curr.dispensed_by) {
+        if (curr.id_specialist) { // Use id_specialist here
             const time = new Date(curr.ids_approved_at || curr.ids_disapproved_at!).getTime() - new Date(curr.dispensed_date!).getTime();
-            if (!acc[curr.dispensed_by]) acc[curr.dispensed_by] = [];
-            acc[curr.dispensed_by].push(time);
+            if (!acc[curr.id_specialist]) acc[curr.id_specialist] = [];
+            acc[curr.id_specialist].push(time);
         }
         return acc;
     }, {} as Record<string, number[]>)).map(([name, times]) => ({ name, value: (times.reduce((a,b)=>a+b,0)/times.length)/(1000*60*60) }));
@@ -272,14 +278,14 @@ const StatsChart: React.FC<StatsChartProps> = ({ data, allData, auditData = [], 
       },
       pharmacy: {
         totalHandled: pharmacyHandled.length, avgPharmacistTime,
-        topPharmacists: getTopN(pharmacyHandled.map(p => p.requested_by), 5),
+        topPharmacists: getTopN(pharmacyHandled.map(p => p.dispensed_by), 5), // Fix: Use dispensed_by
         decisions: pharmacistDecisions,
-        interventionStats, // Added for chart
+        interventionStats, 
       },
       ids: {
         totalConsults: idsHandled.length, avgIdsTime,
         approvalRate: (idsOutcomes[0].value / (idsOutcomes[0].value + idsOutcomes[1].value) * 100 || 0).toFixed(1) + '%',
-        topConsultants: getTopN(idsHandled.map(p => p.dispensed_by), 5),
+        topConsultants: getTopN(idsHandled.map(p => p.id_specialist), 5), // Fix: Use id_specialist
         outcomes: idsOutcomes,
         avgTimePerConsultant: avgTimePerIds
       }
@@ -374,10 +380,10 @@ const StatsChart: React.FC<StatsChartProps> = ({ data, allData, auditData = [], 
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 <div className="col-span-1">
-                    <Top5List title="Top 5 Pharmacists by Activity" data={p.topPharmacists} color="bg-green-200 text-green-800" icon={<></>} onClick={() => setModalConfig({isOpen: true, data: modeFilteredData.filter(d => PHARMACISTS.includes(d.requested_by)), title: 'All Pharmacy Activity'})} />
+                    <Top5List title="Top 5 Pharmacists by Activity" data={p.topPharmacists} color="bg-green-200 text-green-800" icon={<></>} onClick={() => setModalConfig({isOpen: true, data: modeFilteredData.filter(d => d.dispensed_by && PHARMACISTS.includes(d.dispensed_by)), title: 'All Pharmacy Activity'})} />
                 </div>
                 <div className="col-span-1">
-                    <ChartWrapper title="Pharmacist Decisions"><ResponsiveContainer><PieChart><Pie data={p.decisions} dataKey="value" nameKey="name" outerRadius={80} label><Cell fill="#3b82f6"/><Cell fill="#a855f7"/></Pie><Tooltip content={<CustomTooltip/>}/><Legend/></PieChart></ResponsiveContainer></ChartWrapper>
+                    <ChartWrapper title="Pharmacist Decisions"><ResponsiveContainer><PieChart><Pie data={p.decisions} dataKey="value" nameKey="name" outerRadius={80} label><Cell fill="#16a34a"/><Cell fill="#ef4444"/><Cell fill="#3b82f6"/></Pie><Tooltip content={<CustomTooltip/>}/><Legend/></PieChart></ResponsiveContainer></ChartWrapper>
                 </div>
                 <div className="col-span-1">
                     <ChartWrapper title="Intervention Findings">
@@ -400,12 +406,12 @@ const StatsChart: React.FC<StatsChartProps> = ({ data, allData, auditData = [], 
         const i = processedData.ids;
         return <div className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <KpiCard title="Total IDS Consults" value={i.totalConsults} color="bg-teal-100 text-teal-700" icon={<></>} onClick={() => setModalConfig({isOpen: true, data: modeFilteredData.filter(d => IDS_SPECIALISTS.includes(d.dispensed_by || '')), title: 'All IDS Consults'})}/>
-                <KpiCard title="IDS Approval Rate" value={i.approvalRate} color="bg-teal-100 text-teal-700" icon={<></>} onClick={() => setModalConfig({isOpen: true, data: modeFilteredData.filter(d => IDS_SPECIALISTS.includes(d.dispensed_by || '')), title: 'All IDS Consults'})}/>
+                <KpiCard title="Total IDS Consults" value={i.totalConsults} color="bg-teal-100 text-teal-700" icon={<></>} onClick={() => setModalConfig({isOpen: true, data: modeFilteredData.filter(d => d.id_specialist && IDS_SPECIALISTS.includes(d.id_specialist)), title: 'All IDS Consults'})}/>
+                <KpiCard title="IDS Approval Rate" value={i.approvalRate} color="bg-teal-100 text-teal-700" icon={<></>} onClick={() => setModalConfig({isOpen: true, data: modeFilteredData.filter(d => d.id_specialist && IDS_SPECIALISTS.includes(d.id_specialist)), title: 'All IDS Consults'})}/>
                 <KpiCard title="Avg. IDS Turnaround Time" value={i.avgIdsTime} color="bg-teal-100 text-teal-700" icon={<></>} />
             </div>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <Top5List title="Top 5 IDS Consultants by Reviews" data={i.topConsultants} color="bg-teal-200 text-teal-800" icon={<></>} onClick={() => setModalConfig({isOpen: true, data: modeFilteredData.filter(d => IDS_SPECIALISTS.includes(d.dispensed_by || '')), title: 'All IDS Consults'})}/>
+                <Top5List title="Top 5 IDS Consultants by Reviews" data={i.topConsultants} color="bg-teal-200 text-teal-800" icon={<></>} onClick={() => setModalConfig({isOpen: true, data: modeFilteredData.filter(d => d.id_specialist && IDS_SPECIALISTS.includes(d.id_specialist)), title: 'All IDS Consults'})}/>
                 <ChartWrapper title="IDS Decision Outcomes"><ResponsiveContainer><PieChart><Pie data={i.outcomes} dataKey="value" nameKey="name" outerRadius={80} label><Cell fill="#16a34a"/><Cell fill="#ef4444"/></Pie><Tooltip content={<CustomTooltip/>}/><Legend/></PieChart></ResponsiveContainer></ChartWrapper>
                 <ChartWrapper title="Average time chart per IDS" onClick={() => setModalConfig({isOpen: true, data: modeFilteredData.filter(d => d.ids_approved_at || d.ids_disapproved_at), title: 'All IDS Consults'})}>
                   <ResponsiveContainer>
@@ -436,7 +442,12 @@ const StatsChart: React.FC<StatsChartProps> = ({ data, allData, auditData = [], 
     }
   }
 
-  const tabs = ['General', 'Restricted', 'Monitored', 'Pharmacy', 'IDS', 'Audits']; // Added Audits tab
+  const tabs = useMemo(() => {
+    if (role === 'PHARMACIST') {
+        return ['General', 'Restricted', 'Monitored', 'Pharmacy'];
+    }
+    return ['General', 'Restricted', 'Monitored', 'Pharmacy', 'IDS', 'Audits'];
+  }, [role]);
 
   return (
     <div className="space-y-8">

@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { DrugType } from '../types';
 import { IDS_SPECIALISTS } from '../constants';
@@ -13,7 +14,10 @@ interface NewRequestModalProps {
 
 const NewRequestModal: React.FC<NewRequestModalProps> = ({ isOpen, onClose, onSubmit, loading }) => {
   const [formData, setFormData] = useState({
-    req_date: new Date().toISOString().split('T')[0],
+    req_date: (() => {
+        const d = new Date();
+        return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+    })(),
     patient_name: '', hospital_number: '', age: '', sex: '', weight_kg: '', height_cm: '', ward: '',
     mode: 'adult', // New field with default
     diagnosis: '', sgpt: '', scr_mgdl: '', egfr_text: '',

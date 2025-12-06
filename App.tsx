@@ -58,7 +58,7 @@ const FilterControls = ({ selectedMonth, onMonthChange, selectedYear, onYearChan
 }
 
 const tabsConfig: Record<UserRole, string[]> = {
-  [UserRole.PHARMACIST]: ['Pending', 'Approved', 'Disapproved', 'For IDS Approval'],
+  [UserRole.PHARMACIST]: ['Pending', 'Approved', 'Disapproved', 'For IDS Approval', 'Data Analysis'],
   [UserRole.IDS]: ['Pending', 'Approved Restricted', 'Disapproved Restricted'],
   [UserRole.AMS_ADMIN]: ['Data Analysis', 'Restricted', 'Monitored', 'All', 'AMS Audit'],
   [UserRole.RESIDENT]: ['Disapproved'],
@@ -444,9 +444,10 @@ function App() {
     // 1. Pharmacist/IDS History tabs (non-Pending)
     // 2. AMS Admin Lists (non-Analysis/Audit)
     // 3. Resident View (Always)
+    // 4. HIDE if Data Analysis tab (since chart has own filters)
     
     const showFilters = user?.role === UserRole.RESIDENT || 
-        (user?.role !== UserRole.AMS_ADMIN && activeTab !== 'Pending') ||
+        (user?.role !== UserRole.AMS_ADMIN && activeTab !== 'Pending' && activeTab !== 'Data Analysis') ||
         (user?.role === UserRole.AMS_ADMIN && (activeTab !== 'Data Analysis' && activeTab !== 'AMS Audit'));
 
     if (!showFilters) {
@@ -512,7 +513,7 @@ function App() {
 
     const viewData = getFilteredDataForCurrentView();
 
-    if (viewData.length === 0 && !loading && activeTab !== 'Pending' && !(user?.role === UserRole.AMS_ADMIN && activeTab === 'Data Analysis')) {
+    if (viewData.length === 0 && !loading && activeTab !== 'Pending' && activeTab !== 'Data Analysis') {
       return (
         <div className="text-center p-12 bg-white rounded-lg shadow-sm border">
           <h3 className="text-lg font-bold text-gray-800">No Records Found for this View</h3>

@@ -1,4 +1,4 @@
-// ... existing imports ...
+
 import React, { useState, useEffect, useMemo } from 'react';
 import { DrugType, PrescriptionStatus } from '../types'; // Removed Prescription type from imports as we use 'any' for form data or we can import it
 import { IDS_SPECIALISTS_ADULT, IDS_SPECIALISTS_PEDIATRIC } from '../constants';
@@ -63,6 +63,11 @@ const calcCkdEpi2021 = (age: number, sex: string, scr: number) => {
 
 const calcCkidHeightBased = (ht: number, scr: number) => {
   return 0.413 * (ht / scr);
+};
+
+const getTodayDate = () => {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 };
 
 // ... existing sub-components (FormGroup, Input, Select, Textarea) ...
@@ -169,7 +174,7 @@ const OrganismBlock: React.FC<OrganismBlockProps> = ({ id, value, onChange, onRe
 const AntimicrobialRequestForm: React.FC<AntimicrobialRequestFormProps> = ({ isOpen, onClose, onSubmit, loading, initialData }) => {
   const [patientMode, setPatientMode] = useState<'adult' | 'pediatric'>('adult');
   const [formData, setFormData] = useState({
-    req_date: new Date().toISOString().split('T')[0],
+    req_date: getTodayDate(),
     patient_name: '', hospital_number: '', age: '', sex: '', weight_kg: '', height_cm: '', ward: '',
     mode: 'adult' as 'adult' | 'pediatric', 
     diagnosis: '', sgpt: '', scr_mgdl: '', egfr_text: '',
@@ -207,7 +212,7 @@ const AntimicrobialRequestForm: React.FC<AntimicrobialRequestFormProps> = ({ isO
     if (initialData) {
         setFormData({
             ...initialData,
-            req_date: initialData.req_date ? initialData.req_date.split('T')[0] : new Date().toISOString().split('T')[0],
+            req_date: initialData.req_date ? initialData.req_date.split('T')[0] : getTodayDate(),
             selectedIndicationType: initialData.indication as any || '', // Map indication to selectedIndicationType
             scr_mgdl: initialData.scr_mgdl === "Pending" ? "" : initialData.scr_mgdl,
         });
@@ -371,7 +376,7 @@ const AntimicrobialRequestForm: React.FC<AntimicrobialRequestFormProps> = ({ isO
 
   useEffect(() => {
     if (!formData.req_date) {
-      setFormData(prev => ({ ...prev, req_date: new Date().toISOString().split('T')[0] }));
+      setFormData(prev => ({ ...prev, req_date: getTodayDate() }));
     }
     if (prevAbxRows.length === 0) setPrevAbxRows([{ id: nextPrevAbxId.current++, drug: '', frequency: '', duration: '' }]);
     if (organismBlocks.length === 0) setOrganismBlocks([{ id: nextOrganismId.current++, name: '', susceptibilities: [{ drug: '', result: '' }] }]);

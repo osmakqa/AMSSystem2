@@ -431,7 +431,17 @@ const AMSAuditForm: React.FC<AMSAuditFormProps> = ({ isOpen, onClose, initialDat
   const [showReview, setShowReview] = useState(false);
   
   // --- FORM STATE ---
-  const [audit, setAudit] = useState({ auditor: '', auditorOther: '', area: '', areaOther: '', date: new Date().toISOString().slice(0, 10), shift: '' });
+  const [audit, setAudit] = useState({ 
+    auditor: '', 
+    auditorOther: '', 
+    area: '', 
+    areaOther: '', 
+    date: (() => {
+        const d = new Date();
+        return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+    })(), 
+    shift: '' 
+  });
   const [generalNote, setGeneralNote] = useState(''); // NEW GENERAL NOTE
   
   const [patientMode, setPatientMode] = useState<'adult' | 'pediatric'>('adult');
