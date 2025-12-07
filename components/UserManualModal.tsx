@@ -53,19 +53,20 @@ const UserManualModal: React.FC<UserManualModalProps> = ({ isOpen, onClose }) =>
                 </h3>
                 <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
                     <h4 className="font-bold text-gray-900 mb-2 text-sm">Login Credentials</h4>
+                    <p className="text-xs text-gray-600 mb-3">Passwords are case-sensitive (lowercase).</p>
                     <table className="w-full text-sm">
                         <thead>
                             <tr className="border-b border-gray-200 text-left text-gray-700">
                                 <th className="pb-2">User Role</th>
-                                <th className="pb-2">Navigation</th>
-                                <th className="pb-2">Password</th>
+                                <th className="pb-2">Password Format</th>
+                                <th className="pb-2">Example</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-100 text-gray-800">
-                            <tr><td className="py-2 font-medium">Resident / Physician</td><td>Submit Request</td><td className="font-mono text-gray-800">[None]</td></tr>
-                            <tr><td className="py-2 font-medium">Pharmacist</td><td>Pending, History</td><td className="font-mono text-gray-800">********</td></tr>
-                            <tr><td className="py-2 font-medium">ID Specialist (IDS)</td><td>Pending, History</td><td className="font-mono text-gray-800">********</td></tr>
-                            <tr><td className="py-2 font-medium">AMS Admin</td><td>Data Analysis</td><td className="font-mono text-gray-800">********</td></tr>
+                            <tr><td className="py-2 font-medium">Resident</td><td className="font-mono">doctor123</td><td className="text-gray-500">doctor123</td></tr>
+                            <tr><td className="py-2 font-medium">Pharmacist</td><td className="font-mono">[lastname]123</td><td className="text-gray-500">abello123</td></tr>
+                            <tr><td className="py-2 font-medium">IDS Specialist</td><td className="font-mono">[lastname]456</td><td className="text-gray-500">tibayan456</td></tr>
+                            <tr><td className="py-2 font-medium">AMS Admin</td><td className="font-mono">ams123</td><td className="text-gray-500">ams123</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -77,18 +78,36 @@ const UserManualModal: React.FC<UserManualModalProps> = ({ isOpen, onClose }) =>
                     <span className="bg-green-100 text-green-900 w-8 h-8 flex items-center justify-center rounded-full text-sm">3</span>
                     Guide for Residents & Physicians
                 </h3>
-                <div className="space-y-2 text-sm text-gray-800 pl-2 border-l-4 border-green-200">
-                    <p><strong>1. Go to the login page.</strong></p>
-                    <p><strong>2. Click "Submit New Antimicrobial Request".</strong></p>
-                    <p><strong>3. Step 1: Patient Info</strong> – Enter Name, ID, Age, Weight. <em>Pediatrics require Height for eGFR.</em></p>
-                    <p><strong>4. Step 2: Clinical Data</strong> – Enter Diagnosis, Indication, and Lab results (SCr). <em>AI feature displays renal-dosing alerts.</em></p>
-                    <p><strong>5. Step 3: Medication</strong> – Select antimicrobial.</p>
-                    <ul className="list-disc pl-6 text-gray-800">
-                        <li><span className="text-blue-700 font-bold">Monitored:</span> Reviewed by Pharmacy.</li>
-                        <li><span className="text-red-700 font-bold">Restricted:</span> Requires IDS approval.</li>
-                    </ul>
-                    <p><strong>6. Step 4: Micro & History</strong> – Add history of antibiotics/organisms.</p>
-                    <p><strong>7. Submit</strong> the request.</p>
+                <div className="space-y-4 text-sm text-gray-800 pl-2 border-l-4 border-green-200">
+                    <div>
+                        <h4 className="font-bold text-green-800 mb-1">Option A: Submit Request (No Login)</h4>
+                        <ol className="list-decimal pl-5 space-y-1">
+                            <li>On the login page, click **"Submit New Antimicrobial Request"**.</li>
+                            <li>Fill out the form (Patient Info, Clinical Data, Medication).</li>
+                            <li>Click **Submit**. The request is sent to the Pharmacy queue.</li>
+                        </ol>
+                    </div>
+                    
+                    <div>
+                        <h4 className="font-bold text-green-800 mb-1">Option B: Resident Dashboard (Login)</h4>
+                        <ol className="list-decimal pl-5 space-y-1">
+                            <li>Select **"Resident"** tab and log in with password `doctor123`.</li>
+                            <li>Your dashboard shows **Disapproved Requests**.</li>
+                            <li>Use the Month/Year filters to find past requests.</li>
+                        </ol>
+                    </div>
+
+                    <div>
+                        <h4 className="font-bold text-blue-800 mb-1">How to Edit & Resend</h4>
+                        <p className="mb-1">If a request is disapproved:</p>
+                        <ul className="list-disc pl-5">
+                            <li>Click the card to see the **Reason for Disapproval**.</li>
+                            <li>Click the blue **"Edit"** button.</li>
+                            <li>The form will open with previous data pre-filled.</li>
+                            <li>Correct the errors (e.g., adjust dose, change drug) and click **"Update & Resend"**.</li>
+                            <li>The request status resets to **PENDING**.</li>
+                        </ul>
+                    </div>
                 </div>
             </section>
 
@@ -101,14 +120,21 @@ const UserManualModal: React.FC<UserManualModalProps> = ({ isOpen, onClose }) =>
                 <ul className="list-disc pl-5 text-sm text-gray-800 space-y-1 mb-3">
                     <li>Log in as <strong>Pharmacist</strong>.</li>
                     <li>View requests from the <strong>"Pending"</strong> tab.</li>
-                    <li>Click a request card to view: Monograph, Labs, History.</li>
+                    <li>Click a request card to view details (Monograph, Labs, History).</li>
                 </ul>
                 <h4 className="font-bold text-gray-900 text-sm mb-1">Taking Action</h4>
                 <ul className="list-disc pl-5 text-sm text-gray-800 space-y-1">
                     <li><strong>Monitored Drugs:</strong> Approve or Disapprove.</li>
                     <li><strong>Restricted Drugs:</strong> Click <strong>"For IDS Approval"</strong>.</li>
                     <li><strong>Pediatric Safety:</strong> System auto-calculates mg/kg dose.</li>
-                    <li><strong>Review Findings:</strong> Add structured comments like <em>Wrong Dose, Wrong Duration</em>.</li>
+                    <li><strong>Review Findings:</strong> Click on form sections to add structured comments (e.g., "Wrong Dose").</li>
+                </ul>
+                <h4 className="font-bold text-gray-900 text-sm mt-3 mb-1">Data Analysis</h4>
+                <p className="text-sm text-gray-800 mb-2">Click the "Data Analysis" tab to view:</p>
+                <ul className="list-disc pl-5 text-sm text-gray-800 space-y-1">
+                    <li>Pharmacy Turnaround Times.</li>
+                    <li>Top Pharmacists by activity.</li>
+                    <li>Breakdown of Interventions/Findings.</li>
                 </ul>
             </section>
 
@@ -120,8 +146,9 @@ const UserManualModal: React.FC<UserManualModalProps> = ({ isOpen, onClose }) =>
                 </h3>
                 <ul className="list-disc pl-5 text-sm text-gray-800 space-y-1">
                     <li>Log in as <strong>IDS</strong>.</li>
-                    <li>Review requests forwarded by Pharmacy.</li>
-                    <li><strong>Approve</strong> or <strong>Disapprove</strong> to finalize.</li>
+                    <li>Your <strong>"Pending"</strong> tab contains only Restricted drugs forwarded by Pharmacy.</li>
+                    <li>Review the clinical details.</li>
+                    <li>Click <strong>Approve</strong> or <strong>Disapprove</strong> to finalize.</li>
                 </ul>
             </section>
 
@@ -149,10 +176,10 @@ const UserManualModal: React.FC<UserManualModalProps> = ({ isOpen, onClose }) =>
                 </h4>
                 <ol className="list-decimal pl-5 text-sm text-gray-800 space-y-1">
                     <li>Click <strong>"AMS Audit"</strong> tab.</li>
-                    <li><strong>New Audit:</strong> Fill Context, Patient Info, Dosing, Codes (Diagnosis/Indication).</li>
+                    <li><strong>New Audit:</strong> Fill Context, Patient Info, Dosing, Codes.</li>
                     <li><strong>AI Guardrails</strong> check renal and weight dosing automatically.</li>
                     <li><strong>Review & Submit</strong> summary.</li>
-                    <li><strong>Manage Logs:</strong> Review, Edit, and update audit notes.</li>
+                    <li><strong>Manage Logs:</strong> Review and add/edit General Audit Notes.</li>
                 </ol>
             </section>
 
