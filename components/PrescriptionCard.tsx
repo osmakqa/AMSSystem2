@@ -44,15 +44,6 @@ const PrescriptionCard: React.FC<PrescriptionCardProps> = ({ item, onAction, onV
           From: {item.resident_name || 'N/A'} ({item.clinical_dept || 'N/A'})
         </p>
         
-        {/* For Residents View - Show Reason for Disapproval explicitly in card */}
-        {role === UserRole.RESIDENT && item.status === PrescriptionStatus.DISAPPROVED && (
-            <div className="mt-3 pt-3 border-t border-gray-200">
-                <span className="text-xs font-bold text-red-600 uppercase">Reason for Disapproval:</span>
-                <p className="text-xs text-red-800 font-medium mt-1 line-clamp-2">
-                    {item.disapproved_reason || 'See details'}
-                </p>
-            </div>
-        )}
       </div>
 
       <div className="flex flex-wrap gap-2 mt-auto" onClick={(e) => e.stopPropagation()}>

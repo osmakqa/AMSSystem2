@@ -53,7 +53,7 @@ This document defines the requirements for the Osmak AMS System, an application 
 *   **General Audit Note:** Editable field for high-level case summaries.
 
 ## 3. Data Integrity & Security
-*   **Password Policies:** User credentials are role-based and managed by the system administrator. Unique password formats are assigned to each user group (Resident, Pharmacist, IDS, AMS).
+*   **Credential Management:** User credentials are role-based and managed by the system administrator.
 *   **Audit Trail:** Record all actions, timestamps, and active users.
 *   **Persistence:** Supabase cloud database with real-time sync.
 

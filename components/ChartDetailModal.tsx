@@ -18,13 +18,13 @@ const ChartDetailModal: React.FC<ChartDetailModalProps> = ({ isOpen, onClose, da
     const headers = [
       'ID', 'Request Date', 'Patient Name', 'Hospital Number', 'Ward', 
       'Antimicrobial', 'Drug Type', 'Indication', 'Requested By', 
-      'Dispensed By', 'Status', 'Disapproval Reason'
+      'Dispensed By', 'Status'
     ];
 
     const keys: (keyof Prescription)[] = [
       'id', 'req_date', 'patient_name', 'hospital_number', 'ward', 
       'antimicrobial', 'drug_type', 'indication', 'requested_by', 
-      'dispensed_by', 'status', 'disapproved_reason'
+      'dispensed_by', 'status'
     ];
 
     const csvRows = [

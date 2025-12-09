@@ -30,9 +30,9 @@ Log in using the credentials provided by the AMS Committee or IT Department. Pas
 1.  Select the **"Resident"** tab on the login screen.
 2.  Enter your assigned password.
 3.  **Disapproved Requests**: Your dashboard displays requests that were rejected by Pharmacy or IDS.
+    *   Click on a disapproved request card to view detailed information, including any **Review Findings** added by the reviewing pharmacist.
 4.  **Edit & Resend**:
-    *   Click on a disapproved card to see the reason.
-    *   Click the **"Edit"** button.
+    *   Click the blue **"Edit"** button on a disapproved request card.
     *   The form opens with your previous data. Correct the errors (e.g., adjust dose, change drug).
     *   Click **"Update & Resend"**. The request will be re-queued as **PENDING**.
 
@@ -49,7 +49,7 @@ Log in using the credentials provided by the AMS Committee or IT Department. Pas
 *   **For Monitored Drugs:** Approve or Disapprove.
 *   **For Restricted Drugs:** Click **"For IDS Approval"** to forward to IDS.
 *   **Pediatric Safety:** The system automatically verifies `mg/kg` dosing.
-*   **Review Findings:** Click specific sections (e.g., Medication) to add structured notes like "Wrong Dose" or "Wrong Duration".
+*   **Review Findings:** Click specific sections (e.g., Medication) to add structured comments (e.g., "Wrong Dose"). These findings will be visible to the requesting Resident.
 
 ### **Data Analysis**
 *   Click the **"Data Analysis"** tab to view your performance metrics, top drugs processed, and intervention statistics.
@@ -61,7 +61,7 @@ Log in using the credentials provided by the AMS Committee or IT Department. Pas
 1.  Log in as **IDS**.
 2.  Your **"Pending"** tab contains only Restricted drugs forwarded by Pharmacy.
 3.  Review the clinical details.
-4.  Click **Approve** or **Disapprove** to finalize.
+4.  Click **Approve** or **Disapprove** to finalize. Any previous findings will be visible.
 
 ---
 

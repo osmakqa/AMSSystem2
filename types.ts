@@ -95,7 +95,7 @@ export interface Prescription {
   id_specialist?: string;
 
   // Disapproval & Findings
-  disapproved_reason?: string;
+  disapproved_reason?: string; // Add this line
   findings?: RequestFinding[]; // Structured findings from review
 }
 

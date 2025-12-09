@@ -97,20 +97,20 @@ const DetailModal: React.FC<DetailModalProps> = ({ isOpen, onClose, item, role, 
   const [dosingCheck, setDosingCheck] = useState<{ isSafe: boolean; message: string } | null>(null);
   const [isCheckingDose, setIsCheckingDose] = useState(false);
   
-  // Findings State
+  // Findings State (local state for reviewer's current session for adding/removing)
   const [findings, setFindings] = useState<RequestFinding[]>([]);
   const [activeSection, setActiveSection] = useState<string | null>(null);
   const [currentCategory, setCurrentCategory] = useState<string>('');
   const [currentDetails, setCurrentDetails] = useState<string>('');
 
-  // IDS Role is removed from Reviewer Logic - they use the simple workflow
   const isReviewer = role === UserRole.PHARMACIST || role === UserRole.AMS_ADMIN;
+  // Use item.findings for display for all roles, but local 'findings' for reviewer's active editing session
+  const findingsToDisplay = isReviewer ? findings : (item?.findings || []);
+
 
   useEffect(() => {
     let active = true;
     const checkDose = async () => {
-      // IDS can still see pediatric checks, but isReviewer flag mainly controls Findings UI
-      // We allow checking for IDS as well for safety
       const shouldCheck = role === UserRole.PHARMACIST || role === UserRole.AMS_ADMIN || role === UserRole.IDS;
       
       if (item && item.mode === 'pediatric' && shouldCheck) {
@@ -135,13 +135,15 @@ const DetailModal: React.FC<DetailModalProps> = ({ isOpen, onClose, item, role, 
     if (isOpen && item) {
       setDosingCheck(null);
       checkDose();
-      setFindings(item.findings || []);
+      if (isReviewer) { // Only initialize local findings state if the current user is a reviewer
+        setFindings(item.findings || []);
+      }
       setActiveSection(null);
       setCurrentCategory('');
       setCurrentDetails('');
     }
     return () => { active = false; };
-  }, [isOpen, item, role]);
+  }, [isOpen, item, role, isReviewer]);
 
   if (!isOpen || !item) return null;
 
@@ -163,7 +165,8 @@ const DetailModal: React.FC<DetailModalProps> = ({ isOpen, onClose, item, role, 
             }
             onAction(item.id, action, { findings }); 
         } else {
-            // IDS triggers normal disapprove modal via parent (App.tsx fallback)
+            // Non-reviewers (e.g. IDS) trigger normal disapprove modal via parent (App.tsx fallback)
+            // Residents don't have disapprove action here
             onAction(item.id, action);
         }
       } else if (action === ActionType.APPROVE) {
@@ -174,7 +177,7 @@ const DetailModal: React.FC<DetailModalProps> = ({ isOpen, onClose, item, role, 
              onAction(item.id, action);
         }
       } else if (action === ActionType.SAVE_FINDINGS) {
-        // Just save findings
+        // Just save findings (only for reviewers)
         onAction(item.id, action, { findings });
       } else {
         onAction(item.id, action); 
@@ -213,8 +216,8 @@ const DetailModal: React.FC<DetailModalProps> = ({ isOpen, onClose, item, role, 
   };
 
   const SelectableSection = ({ id, title, children, className = '' }: { id: string, title: string, children: React.ReactNode, className?: string }) => {
-    const isSelected = activeSection === id;
-    const hasFinding = findings.some(f => f.section === id);
+    const isSelected = isReviewer && activeSection === id; // Only reviewers can select
+    const hasFinding = isReviewer && findings.some(f => f.section === id); // Only reviewers see their own temporary findings
     return (
       <div 
         onClick={() => isReviewer && setActiveSection(id)}
@@ -232,7 +235,6 @@ const DetailModal: React.FC<DetailModalProps> = ({ isOpen, onClose, item, role, 
   };
   
   const FormattedBlock = ({ label, value, colorClass = "bg-gray-50 border-gray-200 text-gray-800" }: { label: string, value?: any, colorClass?: string }) => {
-    // ... (Keep existing formatting logic)
     const renderOrganismsJSON = (val: any) => {
         try {
             const data = typeof val === 'string' && (val.startsWith('[') || val.startsWith('{')) ? JSON.parse(val) : val;
@@ -340,7 +342,41 @@ const DetailModal: React.FC<DetailModalProps> = ({ isOpen, onClose, item, role, 
                     
                     <SelectableSection id="Indication" title="Indication" className="bg-gray-50 p-4 rounded-lg border border-gray-100 md:col-span-1 group"><div className="space-y-4"><InfoItem label="Indication" value={item.indication} fullWidth /><InfoItem label="Basis of Indication" value={item.basis_indication} fullWidth /></div></SelectableSection>
                     
-                    {item.disapproved_reason && (<div className="bg-red-50 p-4 rounded-lg border border-red-200 col-span-full"><SectionTitle title="Disapproval Details" /><p className="text-red-800 font-medium">{item.disapproved_reason}</p></div>)}
+                    {/* NEW SECTION for Disapproval & Findings - visible to ALL when disapproved */}
+                    {(item.status === PrescriptionStatus.DISAPPROVED) && (
+                        <div className="col-span-full bg-red-50 p-4 rounded-lg border border-red-200">
+                            <SectionTitle title="Disapproval & Review Findings" />
+                            {item.disapproved_reason && (
+                                <div className="mb-4">
+                                    <h5 className="text-xs font-bold text-gray-700 uppercase mb-1">Disapproval Reason</h5>
+                                    <p className="text-red-800 font-medium whitespace-pre-wrap">{item.disapproved_reason}</p>
+                                </div>
+                            )}
+                            {findingsToDisplay.length > 0 && (
+                                <div className="space-y-3 mt-4 pt-4 border-t border-gray-100">
+                                    <h5 className="text-xs font-bold text-gray-700 uppercase">Recorded Findings ({findingsToDisplay.length})</h5>
+                                    {findingsToDisplay.map((f, idx) => (
+                                        <div key={idx} className="bg-red-100 border-l-4 border-red-500 p-3 rounded-md shadow-sm relative group">
+                                            {isReviewer && ( // Only reviewers can remove findings
+                                                <button 
+                                                    onClick={() => removeFinding(f.id)}
+                                                    className="absolute top-2 right-2 text-red-400 hover:text-red-600 opacity-0 group-hover:opacity-100 transition-opacity"
+                                                >
+                                                    &times;
+                                                </button>
+                                            )}
+                                            <p className="text-xs font-bold text-red-800 uppercase mb-1">{f.section}</p>
+                                            <p className="text-sm font-bold text-gray-900">{f.category}</p>
+                                            <p className="text-xs text-gray-600 mt-1">{f.details}</p>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                            {!item.disapproved_reason && findingsToDisplay.length === 0 && (
+                                <p className="text-sm text-gray-500 italic">No specific disapproval reason or findings recorded.</p>
+                            )}
+                        </div>
+                    )}
                     
                     <SelectableSection id="Microbiology & History" title="Microbiology & History" className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm md:col-span-2 group"><div className="grid grid-cols-1 md:grid-cols-2 gap-6"><div className="space-y-3"><FormattedBlock label="Previous Antibiotics" value={item.previous_antibiotics} colorClass="bg-orange-50 border-orange-100 text-orange-900"/></div><div className="space-y-3"><FormattedBlock label="Organisms / Specimen" value={item.organisms} colorClass="bg-red-50 border-red-100 text-red-900"/><InfoItem label="Specimen Source" value={item.specimen} fullWidth /></div></div></SelectableSection>
                     
@@ -404,6 +440,7 @@ const DetailModal: React.FC<DetailModalProps> = ({ isOpen, onClose, item, role, 
                             </div>
                         )}
 
+                        {/* Display of actively added/removed findings for reviewers only */}
                         {findings.length > 0 && (
                             <div className="space-y-3 mt-4 pt-4 border-t border-gray-100">
                                 <h5 className="text-xs font-bold text-gray-400 uppercase">Recorded Findings ({findings.length})</h5>
@@ -468,3 +505,4 @@ const DetailModal: React.FC<DetailModalProps> = ({ isOpen, onClose, item, role, 
 };
 
 export default DetailModal;
+    
