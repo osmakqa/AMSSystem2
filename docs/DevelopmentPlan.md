@@ -2,7 +2,7 @@
 
 **Project Title:** Osmak Antimicrobial Stewardship (AMS) System
 **Department:** Pharmacy / Infectious Disease / IT
-**Date Prepared:** [Insert Date]
+**Date Prepared:** 2024-05-01
 
 ---
 
@@ -27,20 +27,27 @@ To develop a centralized, web-based decision support system that regulates the p
 *   **AI Integration:** Implementation of Google Gemini for:
     *   Renal Dosing Guardrails (eGFR analysis).
     *   Pediatric Dosing Verification (Weight-based checks).
+    *   Weight-Based Dosing for Adult Restricted Drugs (Weight-based checks).
     *   Monograph retrieval.
+*   **New Features:**
+    *   Resident Dashboard for Disapproved requests and Edit/Resend functionality.
+    *   Pharmacist-specific analytics dashboard.
+    *   AMS Audit Tool enhancements, including 'General Audit Note'.
 
 ### Phase 4: Verification (Testing)
 *   **Activity:** Unit testing of eGFR calculators (CKD-EPI / CKiD).
-*   **Activity:** Execution of Test Scripts (See `TestScripts.md`) covering the full lifecycle of a prescription.
+*   **Activity:** Execution of Test Scripts (See `TestScripts.md`) covering the full lifecycle of a prescription and audit processes.
+*   **Activity:** Testing of Resident Edit & Resend workflow.
+*   **Activity:** Verification of new analytics for Pharmacists and AMS Admin.
 
 ### Phase 5: Validation & Deployment
-*   **Activity:** User Acceptance Testing (UAT) by Pharmacy Department and Medical Residents.
+*   **Activity:** User Acceptance Testing (UAT) by Pharmacy Department, Medical Residents, and AMS Committee.
 *   **Output:** Go-Live and integration into daily hospital rounds.
 
 ## 3. Responsibilities and Authorities
 *   **Project Lead / Developer:** Code architecture, AI implementation, and security.
 *   **Process Owner (AMS Head):** Definition of clinical guidelines (monographs) and approval workflows.
-*   **End Users (Pharmacists/IDS):** Validation of workflow efficiency and data accuracy.
+*   **End Users (Pharmacists/IDS/Residents/AMS Admin):** Validation of workflow efficiency and data accuracy.
 
 ## 4. Resources
 *   **Hardware:** Hospital workstations, Mobile devices (for IDS rounds).

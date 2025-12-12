@@ -3,7 +3,7 @@ import { Prescription, DrugType, PrescriptionStatus, UserRole, ActionType } from
 
 interface PrescriptionCardProps {
   item: Prescription;
-  onAction: (id: number, action: ActionType, payload?: any) => void;
+  onAction: (id: string, action: ActionType, payload?: any) => void;
   onView: (item: Prescription) => void;
   role: string;
 }

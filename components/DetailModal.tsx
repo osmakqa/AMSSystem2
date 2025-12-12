@@ -10,7 +10,7 @@ interface DetailModalProps {
   onClose: () => void;
   item: Prescription | null;
   role?: string;
-  onAction?: (id: number, action: ActionType, payload?: any) => void;
+  onAction?: (id: string, action: ActionType, payload?: any) => void;
 }
 
 // --- Lifecycle Tracker Component ---
@@ -505,4 +505,3 @@ const DetailModal: React.FC<DetailModalProps> = ({ isOpen, onClose, item, role, 
 };
 
 export default DetailModal;
-    
