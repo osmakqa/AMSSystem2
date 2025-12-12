@@ -53,3 +53,9 @@ export const LOGO_URL = "https://maxterrenal-hash.github.io/amsone/osmaklogo.png
 // Supabase Configuration
 export const SUPABASE_URL = "https://dofdxmkqqlsmvjchgdwe.supabase.co";
 export const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRvZmR4bWtxcWxzbXZqY2hnZHdlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQxMTkyODAsImV4cCI6MjA3OTY5NTI4MH0.tnBC--0vLTidLhtJOgmU90s769j4W3iksdvmnGZdoPQ";
+
+// Google Apps Script Web App URL for Sheets backup
+// IMPORTANT: Replace this with YOUR deployed Google Apps Script Web App URL.
+// The Apps Script should be configured to accept POST requests and write to the specified Google Sheet.
+// For example: https://script.google.com/macros/s/AKfycbxxxx/exec
+export const GOOGLE_SHEET_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzc3oDXYvKL89d38VZQDnakrxJu5H_P4LVtKLc3QEZSUgks8Xzc2nS9dbUPECu4374WHg/exec";

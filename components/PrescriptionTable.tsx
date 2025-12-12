@@ -3,7 +3,7 @@ import { Prescription, PrescriptionStatus, ActionType } from '../types';
 
 interface PrescriptionTableProps {
   items: Prescription[];
-  onAction: (id: string, action: ActionType) => void;
+  onAction: (id: number, action: ActionType) => void;
   onView: (item: Prescription) => void;
   statusType: PrescriptionStatus | 'ALL_VIEW'; // Added 'ALL_VIEW' for Admin All tab
 }

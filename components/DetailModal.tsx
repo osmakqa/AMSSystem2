@@ -10,7 +10,7 @@ interface DetailModalProps {
   onClose: () => void;
   item: Prescription | null;
   role?: string;
-  onAction?: (id: string, action: ActionType, payload?: any) => void;
+  onAction?: (id: number, action: ActionType, payload?: any) => void;
 }
 
 // --- Lifecycle Tracker Component ---

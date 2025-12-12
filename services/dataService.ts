@@ -1,6 +1,93 @@
 
 import { supabase } from './supabaseClient';
 import { Prescription, PrescriptionStatus, DrugType, AMSAudit } from '../types';
+import { GOOGLE_SHEET_WEB_APP_URL } from '../constants';
+
+/**
+ * Sends data to a Google Apps Script Web App for backup to Google Sheets.
+ * This is a one-way communication from the app to Sheets.
+ * @param sheetName The name of the sheet within the Google Spreadsheet (e.g., "Prescriptions", "Audits").
+ * @param data The data object to send. It will be stringified as JSON.
+ */
+const sendToGoogleSheet = async (sheetName: string, data: any) => {
+  if (!GOOGLE_SHEET_WEB_APP_URL) {
+    console.warn(`Google Sheet backup URL not configured for '${sheetName}'. Skipping backup.`);
+    return;
+  }
+
+  // Flatten nested objects/arrays for Google Sheets
+  // Google Sheets (via simpler Apps Scripts) handles flat key-value pairs best.
+  // Complex objects like 'antimicrobials' array or 'diagnostics' object in AMSAudit
+  // should be stringified so they fit into a single cell.
+  const flatData: Record<string, any> = {};
+  if (data && typeof data === 'object') {
+    Object.keys(data).forEach(key => {
+      const value = data[key];
+      
+      // Explicitly handle undefined to ensure key presence (as null)
+      if (value === undefined) {
+        flatData[key] = null;
+      }
+      // Check if value is an object (and not null) to stringify it
+      else if (typeof value === 'object' && value !== null) {
+        flatData[key] = JSON.stringify(value);
+      } else {
+        flatData[key] = value;
+      }
+    });
+  } else {
+      Object.assign(flatData, data);
+  }
+
+  try {
+    const payloadBody = JSON.stringify({
+      sheetName: sheetName,
+      record: flatData,
+    });
+
+    console.log(`Attempting to send data to Google Sheet '${sheetName}'. Payload size: ${payloadBody.length} bytes.`);
+    
+    const response = await fetch(GOOGLE_SHEET_WEB_APP_URL, {
+      method: 'POST',
+      keepalive: true, // IMPORTANT: Ensures request survives if the component unmounts immediately (e.g., closing modal)
+      headers: {
+        // IMPORTANT: Use text/plain to avoid sending a CORS Preflight (OPTIONS) request.
+        // Google Apps Script doesn't handle OPTIONS requests well, leading to CORS errors.
+        // The script can still parse the JSON body from e.postData.contents.
+        'Content-Type': 'text/plain;charset=utf-8',
+      },
+      body: payloadBody,
+    });
+    
+    if (!response.ok) {
+        console.error(`Google Sheet HTTP Error: ${response.status} ${response.statusText}`);
+        return;
+    }
+
+    // Attempt to parse the script's JSON response to check for application-level errors
+    try {
+        const result = await response.json();
+        if (result.status === 'SUCCESS') {
+            console.log(`Google Sheet Backup Success: ${result.message}`);
+        } else {
+            console.error(`Google Sheet Script Error: ${result.message}`);
+        }
+    } catch (parseError) {
+        // Sometimes the script might return HTML or raw text if it crashes hard
+        const text = await response.text().catch(() => "No body");
+        console.warn(`Google Sheet response was not JSON (Status 200). Raw response: ${text.substring(0, 200)}...`);
+    }
+
+  } catch (error: any) {
+    if (error instanceof TypeError) {
+      // This is often a network error (e.g., no internet, CORS block, invalid URL that can't be resolved)
+      console.error(`Network or CORS error while sending data to Google Sheet '${sheetName}':`, error.message, error);
+    } else {
+      console.error(`Failed to send data to Google Sheet '${sheetName}':`, error);
+    }
+  }
+};
+
 
 // Table name: 'requests'
 
@@ -46,6 +133,24 @@ export const updatePrescriptionStatus = async (
     console.error('Update error:', JSON.stringify(error, null, 2));
     throw error;
   }
+
+  // After successful Supabase update, fetch the latest state and send to Google Sheets
+  try {
+    const { data: updatedItem, error: fetchError } = await supabase
+      .from('requests')
+      .select('*')
+      .eq('id', id)
+      .single();
+
+    if (fetchError) {
+      console.error('Failed to fetch updated prescription for Google Sheets backup:', fetchError);
+    } else if (updatedItem) {
+      // Await this to ensure it completes even if UI transitions
+      await sendToGoogleSheet("Prescriptions", updatedItem);
+    }
+  } catch (sheetError) {
+    console.error('Error in Google Sheets backup after prescription update:', sheetError);
+  }
 };
 
 export const deletePrescription = async (id: number) => {
@@ -58,29 +163,46 @@ export const deletePrescription = async (id: number) => {
     console.error('Delete error:', JSON.stringify(error, null, 2));
     throw error;
   }
+  // For deletion, we could send a special "deleted" status or just log the event.
+  // For a simple backup, we'll just log the deletion (not the item itself, but the ID).
+  await sendToGoogleSheet("Prescriptions_Deleted", { id: id, timestamp: new Date().toISOString() });
 };
 
 export const createPrescription = async (prescription: Partial<Prescription>) => {
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from('requests')
-    .insert([prescription]);
+    .insert([prescription])
+    .select() // Use select to get the inserted data, including the generated ID
+    .single();
 
   if (error) {
     console.error('Create error:', JSON.stringify(error, null, 2));
     throw error;
+  }
+
+  // After successful Supabase insert, send the newly created item to Google Sheets
+  if (data) {
+    await sendToGoogleSheet("Prescriptions", data);
   }
 };
 
 // --- AUDIT FUNCTIONS ---
 
 export const createAudit = async (audit: Partial<AMSAudit>) => {
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from('audits')
-    .insert([audit]);
+    .insert([audit])
+    .select() // Use select to get the inserted data, including the generated ID
+    .single();
 
   if (error) {
     console.error('Create Audit error:', JSON.stringify(error, null, 2));
     throw error;
+  }
+
+  // After successful Supabase insert, send the newly created audit to Google Sheets
+  if (data) {
+    await sendToGoogleSheet("Audits", data);
   }
 };
 
@@ -93,6 +215,23 @@ export const updateAudit = async (id: number, audit: Partial<AMSAudit>) => {
   if (error) {
     console.error('Update Audit error:', JSON.stringify(error, null, 2));
     throw error;
+  }
+
+  // After successful Supabase update, fetch the latest state and send to Google Sheets
+  try {
+    const { data: updatedItem, error: fetchError } = await supabase
+      .from('audits')
+      .select('*')
+      .eq('id', id)
+      .single();
+
+    if (fetchError) {
+      console.error('Failed to fetch updated audit for Google Sheets backup:', fetchError);
+    } else if (updatedItem) {
+      await sendToGoogleSheet("Audits", updatedItem);
+    }
+  } catch (sheetError) {
+    console.error('Error in Google Sheets backup after audit update:', sheetError);
   }
 };
 
