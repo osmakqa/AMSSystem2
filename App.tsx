@@ -63,7 +63,7 @@ const FilterControls = ({ selectedMonth, onMonthChange, selectedYear, onYearChan
 const tabsConfig: Record<UserRole, string[]> = {
   [UserRole.PHARMACIST]: ['Pending', 'History', 'AMS Monitoring', 'Data Analysis'], 
   [UserRole.IDS]: ['Pending', 'History'],
-  [UserRole.AMS_ADMIN]: ['Data Analysis', 'Restricted', 'Monitored', 'Antimicrobials', 'AMS Audit'],
+  [UserRole.AMS_ADMIN]: ['Antimicrobials', 'AMS Audit', 'Data Analysis'],
   [UserRole.RESIDENT]: ['Disapproved'],
 };
 
@@ -202,7 +202,7 @@ function App() {
     } else if (loggedInUser.role === UserRole.RESIDENT) {
       setActiveTab('Disapproved');
     } else {
-      setActiveTab('Data Analysis');
+      setActiveTab('Antimicrobials');
     }
   };
 
@@ -464,9 +464,7 @@ function App() {
     if (user?.role === UserRole.AMS_ADMIN) {
       switch (activeTab) {
         case 'Data Analysis': return data; 
-        case 'Restricted': return items.filter(i => i.drug_type === DrugType.RESTRICTED);
-        case 'Monitored': return items.filter(i => i.drug_type === DrugType.MONITORED);
-        case 'Antimicrobials': return items; // Renamed from 'All'
+        case 'Antimicrobials': return items;
         case 'AMS Audit': return []; 
       }
     }
@@ -664,8 +662,6 @@ function App() {
                   onYearChange={setSelectedYear} 
                 />;
       
-      case 'Restricted':
-      case 'Monitored':
       case 'Antimicrobials':
          // Filter 'Antimicrobials' tab data based on drugTypeFilter
          let displayData = viewData;

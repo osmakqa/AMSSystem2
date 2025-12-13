@@ -7,7 +7,7 @@ export const PHARMACISTS = [
   "Calma, Annalyn B.",
   "Carpio, Leiz Anne M.",
   "Cruz, Noemee Hyacinth D.",
-  "De la Cruz, Shella M.",
+  "Dela Cruz, Shella M.",
   "Delas Alas, Allysa Marie J.",
   "Domingo, Deanne P.",
   "Enriquez, Joan M.",

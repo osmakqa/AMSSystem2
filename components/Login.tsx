@@ -21,8 +21,8 @@ const Login: React.FC<LoginProps> = ({ onLogin, onOpenManual, onOpenWorkflow, on
     if (role === 'RESIDENT') return 'doctor123';
     
     if (role === 'PHARMACIST' && selectedUser) {
-      // Format: "Abello, Corazon L." -> "abello123"
-      const lastName = selectedUser.split(',')[0].trim().toLowerCase();
+      // Format: "Dela Cruz, Corazon L." -> "delacruz123" (removes spaces)
+      const lastName = selectedUser.split(',')[0].trim().toLowerCase().replace(/\s/g, '');
       return `${lastName}123`;
     }
     
