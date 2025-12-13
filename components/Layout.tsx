@@ -1,44 +1,66 @@
 import React from 'react';
 import { LOGO_URL } from '../constants';
-import { User, UserRole } from '../types';
+import { User } from '../types';
 
 interface LayoutProps {
   user: User;
   onLogout: () => void;
   children: React.ReactNode;
+  tabs: string[];
+  activeTab: string;
+  onTabChange: (tab: string) => void;
 }
 
-const Layout: React.FC<LayoutProps> = ({ user, onLogout, children }) => {
+const Layout: React.FC<LayoutProps> = ({ user, onLogout, children, tabs, activeTab, onTabChange }) => {
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
       {/* Header */}
-      <header className="sticky top-0 z-50 flex items-center justify-between gap-4 bg-[#009a3e] text-white px-4 py-3 shadow-[0_2px_6px_rgba(0,0,0,0.15)]">
-        {/* Branding Section */}
-        <div className="flex items-center gap-4">
-          <img 
-            src={LOGO_URL} 
-            alt="OsMak Logo" 
-            className="h-12 w-auto object-contain"
-          />
-          <div className="flex flex-col">
-            <h1 className="m-0 text-[1.05rem] tracking-wider uppercase font-bold leading-tight">
-              OSPITAL NG MAKATI
-            </h1>
-            <span className="text-[0.8rem] opacity-90 leading-tight">
-              Antimicrobial Stewardship System
-            </span>
+      <header className="sticky top-0 z-50 flex items-center justify-between gap-4 bg-[#009a3e] text-white px-4 sm:px-6 lg:px-8 py-3 shadow-md">
+        {/* Branding & Navigation Section */}
+        <div className="flex items-center gap-8">
+          {/* Branding */}
+          <div className="flex items-center gap-3">
+            <img 
+              src={LOGO_URL} 
+              alt="OsMak Logo" 
+              className="h-10 w-auto object-contain"
+            />
+            <div className="flex flex-col">
+              <h1 className="m-0 text-sm tracking-wider uppercase font-bold leading-tight text-white">
+                OSPITAL NG MAKATI
+              </h1>
+              <span className="text-xs text-white/80 leading-tight">
+                Antimicrobial Stewardship
+              </span>
+            </div>
           </div>
+          {/* Desktop Navigation */}
+          <nav className="hidden md:flex items-center gap-6">
+            {tabs.map((tab) => (
+              <button 
+                key={tab} 
+                onClick={() => onTabChange(tab)} 
+                className={`font-medium text-sm transition-colors py-1 ${
+                  activeTab === tab 
+                    ? 'text-white border-b-2 border-white' 
+                    : 'text-white/70 hover:text-white'
+                }`}
+              >
+                {tab}
+              </button>
+            ))}
+          </nav>
         </div>
         
         {/* User Info & Logout Button */}
         <div className="flex items-center gap-4">
           <div className="text-right hidden md:block">
-            <p className="text-sm font-semibold">{user.name}</p>
-            <p className="text-xs opacity-80">{user.role.replace('_', ' ')}</p>
+            <p className="text-sm font-semibold text-white">{user.name}</p>
+            <p className="text-xs text-white/70">{user.role.replace('_', ' ')}</p>
           </div>
           <button 
             onClick={onLogout}
-            className="bg-black/20 hover:bg-black/30 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors border border-white/20"
+            className="bg-white/10 hover:bg-white/20 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors"
           >
             Logout
           </button>

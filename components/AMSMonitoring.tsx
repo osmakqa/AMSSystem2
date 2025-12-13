@@ -1,20 +1,42 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { MonitoringPatient, User } from '../types';
-import { fetchMonitoringPatients, createMonitoringPatient } from '../services/dataService';
+import { fetchMonitoringPatients, createMonitoringPatient, fetchAllMonitoringPatients } from '../services/dataService';
 import MonitoringPatientCard from './MonitoringPatientCard';
 import MonitoringDetailModal from './MonitoringDetailModal';
 import { WARDS } from '../constants';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 
-type TabType = 'Active' | 'Discharged' | 'Expired';
+
+type TabType = 'Active' | 'Discharged' | 'Expired' | 'Data Analysis';
 
 interface AMSMonitoringProps {
     user: User | null;
 }
 
+// Reusable UI Components for charts
+const ChartWrapper = ({ title, children }: { title: string, children: React.ReactNode }) => (
+  <div className="bg-white p-4 rounded-xl shadow-lg border border-gray-200 h-[350px] flex flex-col">
+    <h3 className="text-sm font-bold text-gray-800 mb-4">{title}</h3>
+    <div className="flex-grow w-full h-full">{children}</div>
+  </div>
+);
+
+const KpiCard = ({ title, value, subValue, icon, color }: { title: string, value: string | number, subValue?: string, icon: React.ReactNode, color: string }) => (
+  <div className="bg-white p-4 rounded-xl shadow-lg border border-gray-200 flex items-center gap-4">
+    <div className={`w-10 h-10 rounded-lg flex-shrink-0 flex items-center justify-center ${color}`}>{icon}</div>
+    <div>
+      <p className="text-xl font-bold text-gray-800">{value}</p>
+      <p className="text-xs text-gray-500 font-medium">{title}</p>
+      {subValue && <p className="text-xs text-gray-400 mt-1">{subValue}</p>}
+    </div>
+  </div>
+);
+
 const AMSMonitoring: React.FC<AMSMonitoringProps> = ({ user }) => {
   const [currentTab, setCurrentTab] = useState<TabType>('Active');
   const [patients, setPatients] = useState<MonitoringPatient[]>([]);
+  const [analysisData, setAnalysisData] = useState<MonitoringPatient[]>([]);
   const [filteredPatients, setFilteredPatients] = useState<MonitoringPatient[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -33,34 +55,41 @@ const AMSMonitoring: React.FC<AMSMonitoringProps> = ({ user }) => {
       latest_creatinine: '', infectious_diagnosis: '', dialysis_status: 'No'
   });
 
-  const loadPatients = async () => {
+  const loadPatientsForTab = async (tab: TabType) => {
     setLoading(true);
     setError(null);
-    // Map tab to DB status
-    const statusMap: Record<TabType, string> = {
-        'Active': 'Admitted',
-        'Discharged': 'Discharged',
-        'Expired': 'Expired'
-    };
-    
-    const { data, error } = await fetchMonitoringPatients(statusMap[currentTab]);
-    
-    if (error) {
-        if (error === "Monitoring Table Missing") {
-            setError("Database table 'monitoring_patients' missing. Please contact the administrator.");
+
+    let result;
+    if (tab === 'Data Analysis') {
+        result = await fetchAllMonitoringPatients();
+        if (result.error) {
+            setError(result.error);
+            setAnalysisData([]);
         } else {
-            console.error("Failed to load monitoring patients", error);
+            setAnalysisData(result.data);
         }
-        setPatients([]);
     } else {
-        setPatients(data);
+        const statusMap: Record<TabType, string> = {
+            'Active': 'Admitted',
+            'Discharged': 'Discharged',
+            'Expired': 'Expired',
+            'Data Analysis': '' // Not used here
+        };
+        result = await fetchMonitoringPatients(statusMap[tab]);
+        if (result.error) {
+            setError(result.error);
+            setPatients([]);
+        } else {
+            setPatients(result.data);
+        }
     }
+    
     setLoading(false);
   };
 
   useEffect(() => {
-    loadPatients();
-  }, [currentTab]); // Reload when tab changes
+    loadPatientsForTab(currentTab);
+  }, [currentTab]);
 
   // Sync selectedPatient with updated patients list
   useEffect(() => {
@@ -68,9 +97,19 @@ const AMSMonitoring: React.FC<AMSMonitoringProps> = ({ user }) => {
       const updatedData = patients.find(p => p.id === selectedPatient.id);
       if (updatedData) {
         setSelectedPatient(updatedData);
+      } else {
+        // If patient status changed (e.g., discharged), they are no longer in the list.
+        // We could close the modal or fetch them individually. For now, let's close it.
+        const allPatientsForSync = currentTab === 'Data Analysis' ? analysisData : patients;
+        const updatedPatientFromAll = allPatientsForSync.find(p => p.id === selectedPatient.id);
+        if (updatedPatientFromAll) {
+           setSelectedPatient(updatedPatientFromAll);
+        } else {
+           setSelectedPatient(null);
+        }
       }
     }
-  }, [patients]);
+  }, [patients, analysisData]);
 
   useEffect(() => {
     let result = patients;
@@ -114,13 +153,67 @@ const AMSMonitoring: React.FC<AMSMonitoringProps> = ({ user }) => {
             latest_creatinine: '', infectious_diagnosis: '', dialysis_status: 'No'
           });
           // Only reload if we are on Active tab, otherwise user won't see new patient immediately
-          if (currentTab === 'Active') loadPatients();
+          if (currentTab === 'Active') loadPatientsForTab('Active');
           else setCurrentTab('Active');
       } catch (e) {
           console.error(e);
           alert("Failed to add patient.");
       }
   };
+  
+  const analysisStats = useMemo(() => {
+      if (analysisData.length === 0) return null;
+
+      const activePatients = analysisData.filter(p => p.status === 'Admitted');
+      const allAntimicrobials = analysisData.flatMap(p => p.antimicrobials);
+
+      const activeDrugCounts = allAntimicrobials
+          .filter(a => a.status === 'Active')
+          .reduce((acc, drug) => {
+              acc[drug.drug_name] = (acc[drug.drug_name] || 0) + 1;
+              return acc;
+          }, {} as Record<string, number>);
+
+      const topActiveDrugs = Object.entries(activeDrugCounts)
+          .sort((a, b) => b[1] - a[1])
+          .slice(0, 5)
+          .map(([name, value]) => ({ name, value }));
+
+      const patientsByWard = activePatients.reduce((acc, patient) => {
+          acc[patient.ward] = (acc[patient.ward] || 0) + 1;
+          return acc;
+      }, {} as Record<string, number>);
+
+      const topWards = Object.entries(patientsByWard)
+          .sort((a, b) => b[1] - a[1])
+          .slice(0, 10)
+          .map(([name, value]) => ({ name, value }));
+      
+      const completedTherapies = allAntimicrobials
+          .filter(a => a.status === 'Completed' && a.completed_at && a.start_date);
+      
+      const therapyDurations = completedTherapies.map(a => {
+          const start = new Date(a.start_date);
+          const end = new Date(a.completed_at!);
+          return (end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24);
+      });
+      
+      const avgTherapyDuration = therapyDurations.length > 0
+          ? (therapyDurations.reduce((sum, d) => sum + d, 0) / therapyDurations.length).toFixed(1)
+          : '0';
+
+      return {
+          totalActive: activePatients.length,
+          totalDischarged: analysisData.filter(p => p.status === 'Discharged').length,
+          totalExpired: analysisData.filter(p => p.status === 'Expired').length,
+          avgTherapyDuration,
+          topActiveDrugs,
+          topWards,
+      };
+  }, [analysisData]);
+  
+  const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8'];
+
 
   return (
     <div className="space-y-6">
@@ -130,13 +223,15 @@ const AMSMonitoring: React.FC<AMSMonitoringProps> = ({ user }) => {
                 <h2 className="text-xl font-bold text-gray-800">AMS Monitoring Dashboard</h2>
                 <p className="text-sm text-gray-500">Track active patients and antimicrobial therapy duration.</p>
             </div>
-            <button 
-                onClick={() => setIsAddModalOpen(true)}
-                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium shadow-sm flex items-center gap-2 transition-colors"
-            >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" /></svg>
-                Add Patient
-            </button>
+            {currentTab !== 'Data Analysis' && (
+                <button 
+                    onClick={() => setIsAddModalOpen(true)}
+                    className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium shadow-sm flex items-center gap-2 transition-colors"
+                >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" /></svg>
+                    Add Patient
+                </button>
+            )}
         </div>
 
         {error && (
@@ -150,7 +245,7 @@ const AMSMonitoring: React.FC<AMSMonitoringProps> = ({ user }) => {
         <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
             {/* Tabs */}
             <div className="flex p-1 bg-gray-100 rounded-lg">
-                {(['Active', 'Discharged', 'Expired'] as TabType[]).map(tab => (
+                {(['Active', 'Discharged', 'Expired', 'Data Analysis'] as TabType[]).map(tab => (
                     <button
                         key={tab}
                         onClick={() => setCurrentTab(tab)}
@@ -160,33 +255,77 @@ const AMSMonitoring: React.FC<AMSMonitoringProps> = ({ user }) => {
                             : 'text-gray-500 hover:text-gray-700 hover:bg-gray-200'
                         }`}
                     >
-                        {tab} Patients
+                        {tab === 'Data Analysis' ? 'Data Analysis' : `${tab} Patients`}
                     </button>
                 ))}
             </div>
 
-            {/* Filter */}
-            <div className="flex items-center gap-2 bg-white p-2 rounded-lg border border-gray-200 shadow-sm">
-                <span className="text-xs font-bold text-gray-500 uppercase pl-2">Filter Ward:</span>
-                <select 
-                    value={wardFilter} 
-                    onChange={(e) => setWardFilter(e.target.value)} 
-                    className="border-none bg-transparent text-sm font-medium text-gray-800 focus:ring-0 cursor-pointer"
-                >
-                    <option value="All">All Wards</option>
-                    {WARDS.map(w => <option key={w} value={w}>{w}</option>)}
-                </select>
-            </div>
+            {currentTab !== 'Data Analysis' && (
+              <div className="flex items-center gap-2 bg-white p-2 rounded-lg border border-gray-200 shadow-sm">
+                  <span className="text-xs font-bold text-gray-500 uppercase pl-2">Filter Ward:</span>
+                  <select 
+                      value={wardFilter} 
+                      onChange={(e) => setWardFilter(e.target.value)} 
+                      className="border-none bg-transparent text-sm font-medium text-gray-800 focus:ring-0 cursor-pointer"
+                  >
+                      <option value="All">All Wards</option>
+                      {WARDS.map(w => <option key={w} value={w}>{w}</option>)}
+                  </select>
+              </div>
+            )}
         </div>
 
-        {/* Patient Grid */}
+        {/* Content Area */}
         {loading ? (
             <div className="text-center py-20 text-gray-500 flex flex-col items-center">
                 <svg className="animate-spin h-8 w-8 text-blue-500 mb-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                 </svg>
-                Loading patients...
+                Loading data...
+            </div>
+        ) : currentTab === 'Data Analysis' ? (
+            <div className="space-y-6 animate-fade-in">
+                {analysisStats ? (
+                    <>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                            <KpiCard title="Active Patients" value={analysisStats.totalActive} color="bg-blue-100 text-blue-700" icon={<svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z" /></svg>} />
+                            <KpiCard title="Avg. Therapy Duration" value={`${analysisStats.avgTherapyDuration} days`} subValue="for completed therapies" color="bg-green-100 text-green-700" icon={<svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.414-1.415L11 9.586V6z" clipRule="evenodd" /></svg>} />
+                            <KpiCard title="Total Discharged" value={analysisStats.totalDischarged} color="bg-gray-100 text-gray-700" icon={<svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M3 3a1 1 0 011 1v12a1 1 0 11-2 0V4a1 1 0 011-1zm7.707 3.293a1 1 0 010 1.414L9.414 9H17a1 1 0 110 2H9.414l1.293 1.293a1 1 0 01-1.414 1.414l-3-3a1 1 0 010-1.414l3-3a1 1 0 011.414 0z" clipRule="evenodd" /></svg>} />
+                            <KpiCard title="Total Expired" value={analysisStats.totalExpired} color="bg-red-100 text-red-700" icon={<svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" /></svg>} />
+                        </div>
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                            <ChartWrapper title="Top 5 Active Antimicrobials">
+                                <ResponsiveContainer>
+                                    <BarChart data={analysisStats.topActiveDrugs} layout="vertical" margin={{ top: 5, right: 20, left: 80, bottom: 5 }}>
+                                        <CartesianGrid strokeDasharray="3 3" horizontal={false}/>
+                                        <XAxis type="number" allowDecimals={false} />
+                                        <YAxis type="category" dataKey="name" tick={{ fontSize: 10 }} />
+                                        <Tooltip />
+                                        <Bar dataKey="value" name="Count" fill="#3b82f6" radius={[0, 4, 4, 0]} />
+                                    </BarChart>
+                                </ResponsiveContainer>
+                            </ChartWrapper>
+                            <ChartWrapper title="Active Patients by Ward">
+                                <ResponsiveContainer>
+                                    <BarChart data={analysisStats.topWards} margin={{ top: 5, right: 20, left: 20, bottom: 60 }}>
+                                        <CartesianGrid strokeDasharray="3 3" vertical={false}/>
+                                        <XAxis dataKey="name" angle={-45} textAnchor="end" interval={0} tick={{ fontSize: 10 }} />
+                                        <YAxis allowDecimals={false} />
+                                        <Tooltip />
+                                        <Bar dataKey="value" name="Patients" fill="#10b981" radius={[4, 4, 0, 0]}>
+                                            {analysisStats.topWards.map((entry, index) => (<Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />))}
+                                        </Bar>
+                                    </BarChart>
+                                </ResponsiveContainer>
+                            </ChartWrapper>
+                        </div>
+                    </>
+                ) : (
+                     <div className="text-center py-16 bg-white rounded-xl border border-dashed border-gray-300 text-gray-400">
+                        No data available for analysis.
+                    </div>
+                )}
             </div>
         ) : filteredPatients.length === 0 ? (
             <div className="text-center py-16 bg-white rounded-xl border border-dashed border-gray-300 text-gray-400">
@@ -211,7 +350,7 @@ const AMSMonitoring: React.FC<AMSMonitoringProps> = ({ user }) => {
             patient={selectedPatient}
             user={user}
             onUpdate={() => {
-                loadPatients();
+                loadPatientsForTab(currentTab);
             }}
         />
 

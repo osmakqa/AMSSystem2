@@ -1,66 +1,107 @@
-
 import React from 'react';
-import { MonitoringPatient } from '../types';
+import { MonitoringPatient, MonitoringAntimicrobial, AdminLogEntry } from '../types';
 
 interface MonitoringPatientCardProps {
   patient: MonitoringPatient;
   onClick: (patient: MonitoringPatient) => void;
 }
 
+// --- SVG Icons ---
+const LocationIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg>;
+
+// --- Helper Functions (copied from modal for card display) ---
+const normalizeLogEntry = (entry: string | AdminLogEntry): AdminLogEntry => {
+    if (typeof entry === 'string') return { time: entry, status: 'Given' };
+    return entry;
+};
+
+const calculateDoseBasedDuration = (drug: MonitoringAntimicrobial): string => {
+  const totalDosesGiven = drug.administration_log 
+    ? Object.values(drug.administration_log)
+        .flat()
+        .filter(entry => normalizeLogEntry(entry).status === 'Given')
+        .length
+    : 0;
+
+  if (totalDosesGiven === 0) {
+      return "0 doses";
+  }
+  
+  if (!drug.frequency_hours || drug.frequency_hours <= 0) {
+      return `${totalDosesGiven} doses`;
+  }
+  
+  const dosesPerDay = Math.max(1, Math.floor(24 / drug.frequency_hours));
+
+  if (dosesPerDay <= 1) {
+      return `Day ${totalDosesGiven}`;
+  } else {
+      const fullDays = Math.floor(totalDosesGiven / dosesPerDay);
+      const extraDoses = totalDosesGiven % dosesPerDay;
+
+      if (extraDoses === 0 && fullDays > 0) {
+          return `Day ${fullDays}`;
+      }
+      if (fullDays === 0) {
+          return `${extraDoses} doses`;
+      }
+      return `Day ${fullDays} + ${extraDoses}`;
+  }
+};
+
+
 const MonitoringPatientCard: React.FC<MonitoringPatientCardProps> = ({ patient, onClick }) => {
   const activeDrugs = patient.antimicrobials?.filter(a => a.status === 'Active') || [];
   
-  const calculateDay = (startDate: string) => {
-      const start = new Date(startDate);
-      const now = new Date();
-      // Normalize to start of day to avoid time differences
-      start.setHours(0,0,0,0);
-      now.setHours(0,0,0,0);
-      const diffTime = now.getTime() - start.getTime();
-      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
-      return diffDays >= 0 ? diffDays + 1 : 1; // Day 1 is the start date
+  // --- Styling ---
+  const statusConfig = {
+    Admitted: { border: 'border-blue-500', badge: 'bg-blue-100 text-blue-800', badgeText: 'Active' },
+    Discharged: { border: 'border-gray-400', badge: 'bg-gray-100 text-gray-800', badgeText: 'Discharged' },
+    Expired: { border: 'border-red-500', badge: 'bg-red-100 text-red-800', badgeText: 'Expired' },
   };
+  const currentStatus = statusConfig[patient.status] || statusConfig.Admitted;
 
-  const statusColor = patient.status === 'Discharged' ? 'bg-gray-100 border-gray-200' : 
-                      patient.status === 'Expired' ? 'bg-red-50 border-red-200' : 'bg-white border-blue-100';
 
   return (
     <div 
       onClick={() => onClick(patient)}
-      className={`rounded-xl shadow-sm border p-0 cursor-pointer hover:shadow-lg hover:border-blue-400 transition-all duration-300 group flex flex-col h-full overflow-hidden ${statusColor}`}
+      className={`bg-white rounded-xl shadow-md border border-gray-200/80 border-l-4 ${currentStatus.border} p-4 cursor-pointer hover:shadow-xl hover:border-blue-500 hover:ring-2 hover:ring-blue-200 transition-all duration-300 flex flex-col h-full group`}
     >
-      <div className="p-4 border-b border-gray-100 bg-white/50">
-          <div className="flex justify-between items-start mb-2">
-            <div>
-                <h3 className="font-bold text-lg text-gray-800 group-hover:text-blue-700 transition-colors leading-tight">{patient.patient_name}</h3>
-                <span className="text-xs font-mono text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded mt-1 inline-block">{patient.hospital_number}</span>
-            </div>
-            <div className="text-right flex flex-col items-end">
-                <span className="block text-xs font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full uppercase tracking-wide">{patient.ward}</span>
-                <span className="text-xs font-semibold text-gray-600 mt-1">Bed {patient.bed_number}</span>
-            </div>
-          </div>
-          <div className="flex gap-2 mt-2">
-             <span className="text-xs px-2 py-0.5 rounded bg-gray-100 text-gray-600 font-medium border border-gray-200">{patient.age}y / {patient.sex}</span>
-             {patient.dialysis_status === 'Yes' && <span className="text-xs px-2 py-0.5 rounded bg-purple-50 text-purple-700 font-bold border border-purple-100">Dialysis</span>}
-          </div>
+      {/* Header */}
+      <div className="flex justify-between items-start mb-3">
+        <div className="flex-1">
+            <h3 className="font-extrabold text-lg text-gray-800 group-hover:text-blue-700 transition-colors leading-tight">{patient.patient_name}</h3>
+            <p className="text-xs text-gray-500 font-mono mt-1">{patient.hospital_number}</p>
+        </div>
+        <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${currentStatus.badge}`}>{currentStatus.badgeText}</span>
       </div>
 
-      <div className="p-4 bg-white flex-1 flex flex-col">
-          <p className="text-[10px] font-bold text-gray-400 uppercase mb-2 tracking-wider">Active Therapy</p>
-          <div className="space-y-2 flex-1">
-              {activeDrugs.length > 0 ? activeDrugs.slice(0, 3).map((drug, i) => (
-                  <div key={i} className="flex justify-between text-sm items-center bg-gray-50 p-1.5 rounded border border-gray-100">
-                      <span className="font-semibold text-gray-700 truncate mr-2">{drug.drug_name}</span>
-                      <span className="text-[10px] font-bold bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded whitespace-nowrap">
-                          Day {calculateDay(drug.start_date)}
-                      </span>
-                  </div>
-              )) : (
-                  <div className="text-xs text-gray-400 italic py-2 text-center bg-gray-50 rounded border border-dashed border-gray-200">No active antimicrobials</div>
-              )}
-              {activeDrugs.length > 3 && <p className="text-xs text-center text-blue-600 font-bold bg-blue-50 py-1 rounded">+ {activeDrugs.length - 3} more</p>}
+      {/* Location */}
+      <div className="flex items-center gap-2 text-sm text-gray-600 mb-4 border-t border-gray-100 pt-3">
+         <LocationIcon />
+         <span className="font-semibold">{patient.ward}</span>
+         <span>-</span>
+         <span>Bed {patient.bed_number}</span>
+      </div>
+
+      {/* Active Antimicrobials List */}
+      <div className="mt-auto border-t border-gray-100 pt-3">
+        <h4 className="text-[10px] font-bold text-gray-400 uppercase mb-2">Active Antimicrobials</h4>
+        {activeDrugs.length > 0 ? (
+          <div className="space-y-1.5">
+            {activeDrugs.map(drug => {
+              const durationString = calculateDoseBasedDuration(drug);
+              return (
+                <div key={drug.id} className="text-xs font-medium bg-blue-50 text-blue-800 px-2 py-1 rounded-md border border-blue-100 flex justify-between items-center">
+                  <span>{drug.drug_name}</span>
+                  <span className="font-bold">{durationString}</span>
+                </div>
+              );
+            })}
           </div>
+        ) : (
+          <p className="text-xs text-gray-400 italic">No active therapies.</p>
+        )}
       </div>
     </div>
   );

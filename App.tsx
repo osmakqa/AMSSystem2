@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect } from 'react';
 import Login from './components/Login';
 import Layout from './components/Layout';
@@ -65,6 +66,38 @@ const tabsConfig: Record<UserRole, string[]> = {
   [UserRole.AMS_ADMIN]: ['Data Analysis', 'Restricted', 'Monitored', 'Antimicrobials', 'AMS Audit'],
   [UserRole.RESIDENT]: ['Disapproved'],
 };
+
+const TabIcon = ({ tabName }: { tabName: string }) => {
+  let path;
+  switch (tabName) {
+    case 'Pending':
+      path = <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.414-1.415L11 9.586V6z" clipRule="evenodd" />;
+      break;
+    case 'History':
+      path = <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 5.555A.5.5 0 0110 5v5.5a.5.5 0 01-.146.354l-3.5 3.5a.5.5 0 01-.708-.708L9.5 10.293V5.555z" clipRule="evenodd" />;
+      break;
+    case 'AMS Monitoring':
+      path = <path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z" />;
+      break;
+    case 'Data Analysis':
+      path = <path d="M2 11a1 1 0 011-1h2a1 1 0 011 1v5a1 1 0 01-1 1H3a1 1 0 01-1-1v-5zM8 7a1 1 0 011-1h2a1 1 0 011 1v9a1 1 0 01-1 1H9a1 1 0 01-1-1V7zM14 4a1 1 0 011-1h2a1 1 0 011 1v12a1 1 0 01-1 1h-2a1 1 0 01-1-1V4z" />;
+      break;
+    case 'AMS Audit':
+      path = <path fillRule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clipRule="evenodd" />;
+      break;
+    case 'Disapproved':
+        path = <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+        break;
+    default:
+      path = <path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />;
+  }
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+        {path}
+    </svg>
+  );
+};
+
 
 function App() {
   const [user, setUser] = useState<User | null>(null);
@@ -460,7 +493,7 @@ function App() {
       <div className="flex flex-col sm:flex-row gap-4 items-center justify-between mb-6 bg-white p-4 rounded-xl shadow-md border border-gray-200">
         <div className="flex items-center gap-4">
             <h3 className="font-semibold text-gray-800 flex items-center gap-2.5">
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" /></svg>
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293.707L3.293 7.293A1 1 0 013 6.586V4z" /></svg>
             Filters
             </h3>
             {/* History Status Dropdown */}
@@ -504,16 +537,19 @@ function App() {
     if (activeTab === 'AMS Audit' && user?.role === UserRole.AMS_ADMIN) {
         return (
             <div className="space-y-4">
-                <div className="flex justify-between items-center">
-                    <h2 className="text-2xl font-bold text-gray-800">AMS Audit Logs</h2>
+                <div className="flex flex-col md:flex-row justify-between items-center gap-4 bg-white p-4 rounded-xl shadow-sm border border-gray-200">
+                    <div>
+                        <h2 className="text-xl font-bold text-gray-800">AMS Audit Dashboard</h2>
+                        <p className="text-sm text-gray-500">Create new audits and review existing audit logs.</p>
+                    </div>
                     <button 
                         onClick={() => {
                             setSelectedAuditToEdit(null); 
                             setIsAMSAuditFormOpen(true);
                         }} 
-                        className="bg-green-600 text-white px-4 py-2 rounded-lg shadow hover:bg-green-700 font-medium text-sm flex items-center gap-2"
+                        className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium shadow-sm flex items-center gap-2 transition-colors"
                     >
-                         <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
+                         <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" /></svg>
                          New Audit
                     </button>
                 </div>
@@ -547,24 +583,64 @@ function App() {
     
     if (loading) return <div className="text-center p-20 text-gray-500">Loading records...</div>;
 
-    // View Switching
-    
     // Pharmacist Pending OR Resident Disapproved Cards View
     if (activeTab === 'Pending' || (user?.role === UserRole.RESIDENT && activeTab === 'Disapproved')) {
-        const title = activeTab === 'Pending' ? `Pending Requests (${viewData.length})` : `Disapproved Requests (${viewData.length})`;
-        return (
-          <div>
-             <div className="flex justify-between items-center mb-6">
-              <h2 className="text-2xl font-bold text-gray-800">{title}</h2>
-              {user?.role === UserRole.PHARMACIST && <button onClick={() => setIsNewRequestModalOpen(true)} className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded shadow text-sm font-medium">New Request</button>}
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {viewData.length === 0 ? <p className="col-span-full text-center py-10 bg-white rounded-lg">No items found.</p> : viewData.map(item => (
-                <PrescriptionCard key={item.id} item={item} role={user!.role} onAction={handleActionClick} onView={handleViewDetails} />
-              ))}
-            </div>
-          </div>
-        );
+        if (user?.role === UserRole.PHARMACIST && activeTab === 'Pending') {
+            return (
+              <div>
+                 <div className="flex flex-col md:flex-row justify-between items-center gap-4 bg-white p-4 rounded-xl shadow-sm border border-gray-200 mb-6">
+                    <div>
+                        <h2 className="text-xl font-bold text-gray-800">Pending Requests</h2>
+                        <p className="text-sm text-gray-500">Review new antimicrobial requests. Total pending: {viewData.length}</p>
+                    </div>
+                    <button 
+                        onClick={() => setIsNewRequestModalOpen(true)}
+                        className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium shadow-sm flex items-center gap-2 transition-colors"
+                    >
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" /></svg>
+                        New Request
+                    </button>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {viewData.length === 0 ? <p className="col-span-full text-center py-10 bg-white rounded-lg">No items found.</p> : viewData.map(item => (
+                    <PrescriptionCard key={item.id} item={item} role={user!.role} onAction={handleActionClick} onView={handleViewDetails} />
+                  ))}
+                </div>
+              </div>
+            );
+        } else if (user?.role === UserRole.IDS && activeTab === 'Pending') {
+            return (
+                <div>
+                    <div className="flex flex-col md:flex-row justify-between items-center gap-4 bg-white p-4 rounded-xl shadow-sm border border-gray-200 mb-6">
+                        <div>
+                            <h2 className="text-xl font-bold text-gray-800">Pending for IDS Approval</h2>
+                            <p className="text-sm text-gray-500">Review restricted antimicrobial requests. Total pending: {viewData.length}</p>
+                        </div>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                      {viewData.length === 0 ? <p className="col-span-full text-center py-10 bg-white rounded-lg">No items found.</p> : viewData.map(item => (
+                        <PrescriptionCard key={item.id} item={item} role={user!.role} onAction={handleActionClick} onView={handleViewDetails} />
+                      ))}
+                    </div>
+                </div>
+            );
+        } else if (user?.role === UserRole.RESIDENT && activeTab === 'Disapproved') {
+            return (
+                <div>
+                    <div className="flex flex-col md:flex-row justify-between items-center gap-4 bg-white p-4 rounded-xl shadow-sm border border-gray-200 mb-6">
+                        <div>
+                            <h2 className="text-xl font-bold text-gray-800">Disapproved Requests</h2>
+                            <p className="text-sm text-gray-500">Review, edit, and resubmit rejected requests. Total: {viewData.length}</p>
+                        </div>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                      {viewData.length === 0 ? <p className="col-span-full text-center py-10 bg-white rounded-lg">No items found.</p> : viewData.map(item => (
+                        <PrescriptionCard key={item.id} item={item} role={user!.role} onAction={handleActionClick} onView={handleViewDetails} />
+                      ))}
+                    </div>
+                </div>
+            );
+        }
     }
 
     switch(activeTab) {
@@ -633,6 +709,11 @@ function App() {
     }
   };
   
+  const handleTabChange = (tab: string) => {
+    setActiveTab(tab); 
+    if(tab === 'History') setHistoryStatusFilter('Approved'); 
+  };
+  
   const currentTabs = user ? tabsConfig[user.role] : tabsConfig[UserRole.PHARMACIST]; 
 
   return (
@@ -685,48 +766,50 @@ function App() {
           }}
         />
       ) : (
-        <Layout user={user} onLogout={handleLogout}>
-          <PasswordModal 
-            isOpen={isPasswordModalOpen} 
-            onClose={() => setIsPasswordModalOpen(false)} 
-            onConfirm={handleConfirmPassword} 
-            expectedPassword={getCurrentUserPassword(user)} // Pass user-specific password
-          />
-          <NewRequestModal isOpen={isNewRequestModalOpen} onClose={() => setIsNewRequestModalOpen(false)} onSubmit={handleNewRequestSubmit} loading={isSubmitting} />
-          <DisapproveModal isOpen={isDisapproveModalOpen} onClose={() => setIsDisapproveModalOpen(false)} onSubmit={handleDisapproveSubmit} loading={isSubmitting} />
-          <DetailModal isOpen={!!selectedItemForView} onClose={() => setSelectedItemForView(null)} item={selectedItemForView} role={user.role} onAction={handleActionClick} />
+        <>
+          <Layout 
+            user={user} 
+            onLogout={handleLogout}
+            tabs={currentTabs}
+            activeTab={activeTab}
+            onTabChange={handleTabChange}
+          >
+            <PasswordModal 
+              isOpen={isPasswordModalOpen} 
+              onClose={() => setIsPasswordModalOpen(false)} 
+              onConfirm={handleConfirmPassword} 
+              expectedPassword={getCurrentUserPassword(user)} // Pass user-specific password
+            />
+            <NewRequestModal isOpen={isNewRequestModalOpen} onClose={() => setIsNewRequestModalOpen(false)} onSubmit={handleNewRequestSubmit} loading={isSubmitting} />
+            <DisapproveModal isOpen={isDisapproveModalOpen} onClose={() => setIsDisapproveModalOpen(false)} onSubmit={handleDisapproveSubmit} loading={isSubmitting} />
+            <DetailModal isOpen={!!selectedItemForView} onClose={() => setSelectedItemForView(null)} item={selectedItemForView} role={user.role} onAction={handleActionClick} />
+            
+            <div className="pb-20 md:pb-0"> {/* Padding for mobile bottom nav */}
+              {FilterHeader()}
+              {renderContent()}
+            </div>
+          </Layout>
           
-          {/* Responsive Navigation Bar */}
-          <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-2 z-50 md:static md:border-t-0 md:border-b md:bg-transparent md:p-0 md:mb-6 flex overflow-x-auto gap-2 md:gap-8 justify-around md:justify-start shadow-md md:shadow-none">
+          {/* MOBILE-ONLY Navigation Bar */}
+          <div className="fixed bottom-0 left-0 right-0 bg-[#009a3e] p-1 z-40 md:hidden flex overflow-x-auto gap-1 justify-around shadow-[0_-2px_10px_rgba(0,0,0,0.1)]">
             {currentTabs.map((tab) => (
-                <button 
-                    key={tab} 
-                    onClick={() => { 
-                        setActiveTab(tab); 
-                        if(tab === 'History') setHistoryStatusFilter('Approved'); 
-                    }} 
-                    className={`whitespace-nowrap px-3 py-2 md:pb-4 md:px-1 md:pt-0 font-medium text-xs md:text-sm transition-colors rounded-md md:rounded-none md:border-b-2 flex flex-col md:block items-center
-                        ${activeTab === tab 
-                            ? 'bg-green-50 text-green-700 md:bg-transparent md:border-green-600 md:text-green-700' 
-                            : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50 md:hover:bg-transparent md:border-transparent'
-                        }`}
-                >
-                    {/* Optional Icon for Mobile (Can add specific icons per tab if needed) */}
-                    <span className="md:hidden mb-1">
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                            <path d="M5 4a2 2 0 012-2h6a2 2 0 012 2v14l-5-2.5L5 18V4z" />
-                        </svg>
-                    </span>
-                    {tab}
-                </button>
+              <button 
+                key={tab} 
+                onClick={() => handleTabChange(tab)} 
+                className={`whitespace-nowrap px-2 py-1.5 font-medium text-xs transition-colors rounded-md flex flex-col items-center flex-1
+                  ${activeTab === tab 
+                    ? 'bg-white/20 text-white' 
+                    : 'text-white/70 hover:text-white hover:bg-white/10'
+                  }`}
+              >
+                <span className="mb-0.5">
+                  <TabIcon tabName={tab} />
+                </span>
+                {tab}
+              </button>
             ))}
           </div>
-          
-          <div className="pb-20 md:pb-0"> {/* Padding for mobile bottom nav */}
-            {FilterHeader()}
-            {renderContent()}
-          </div>
-        </Layout>
+        </>
       )}
     </>
   );

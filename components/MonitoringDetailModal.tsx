@@ -79,7 +79,7 @@ const DOSE_CHANGE_REASONS = [
 ];
 
 const MonitoringDetailModal: React.FC<MonitoringDetailModalProps> = ({ isOpen, onClose, patient, user, onUpdate }) => {
-  const [activeTab, setActiveTab] = useState<'Details' | 'Antimicrobials'>('Details');
+  const [activeTab, setActiveTab] = useState<'Details' | 'Antimicrobials'>('Antimicrobials');
   const [formData, setFormData] = useState<Partial<MonitoringPatient>>({});
   
   // Transfer State
@@ -167,7 +167,7 @@ const MonitoringDetailModal: React.FC<MonitoringDetailModalProps> = ({ isOpen, o
       return entry;
   };
 
-  const calculateTherapyDay = (drug: MonitoringAntimicrobial): string => {
+  const calculateDoseBasedDuration = (drug: MonitoringAntimicrobial): string => {
     const totalDosesGiven = drug.administration_log 
       ? Object.values(drug.administration_log)
           .flat()
@@ -176,14 +176,14 @@ const MonitoringDetailModal: React.FC<MonitoringDetailModalProps> = ({ isOpen, o
       : 0;
 
     if (totalDosesGiven === 0) {
-        return drug.status === 'Active' ? "Day 1" : "0 doses";
+        return "0 doses";
     }
     
     if (!drug.frequency_hours || drug.frequency_hours <= 0) {
         return `${totalDosesGiven} doses`;
     }
     
-    const dosesPerDay = Math.floor(24 / drug.frequency_hours);
+    const dosesPerDay = Math.max(1, Math.floor(24 / drug.frequency_hours));
 
     if (dosesPerDay <= 1) {
         return `Day ${totalDosesGiven}`;
@@ -191,7 +191,7 @@ const MonitoringDetailModal: React.FC<MonitoringDetailModalProps> = ({ isOpen, o
         const fullDays = Math.floor(totalDosesGiven / dosesPerDay);
         const extraDoses = totalDosesGiven % dosesPerDay;
 
-        if (extraDoses === 0) {
+        if (extraDoses === 0 && fullDays > 0) {
             return `Day ${fullDays}`;
         }
         if (fullDays === 0) {
@@ -654,7 +654,7 @@ const MonitoringDetailModal: React.FC<MonitoringDetailModalProps> = ({ isOpen, o
             </div>
             <div className="flex flex-col items-end gap-1">
                 <button onClick={onClose} className="bg-white/10 hover:bg-white/20 p-2 rounded-full transition-colors">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
                 </button>
                 {patient.last_updated_by && <span className="text-[10px] text-blue-200">Last updated by: {patient.last_updated_by}</span>}
             </div>
@@ -662,7 +662,7 @@ const MonitoringDetailModal: React.FC<MonitoringDetailModalProps> = ({ isOpen, o
 
         {/* Tabs */}
         <div className="flex border-b border-gray-200 bg-gray-50/50 px-6 pt-2 shrink-0">
-            {['Details', 'Antimicrobials'].map(tab => (
+            {['Antimicrobials', 'Details'].map(tab => (
                 <button 
                     key={tab}
                     className={`px-6 py-3 text-sm font-bold border-b-2 transition-colors ${activeTab === tab ? 'border-blue-600 text-blue-700 bg-white rounded-t-lg' : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-100/50'}`}
@@ -676,86 +676,69 @@ const MonitoringDetailModal: React.FC<MonitoringDetailModalProps> = ({ isOpen, o
         {/* Content */}
         <div className="flex-1 overflow-y-auto p-6 bg-gray-100/50 scrollable-content">
             {activeTab === 'Details' && (
-                <div className="space-y-4 max-w-4xl mx-auto">
-                    <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
-                        {/* Vitals Form */}
-                        <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider border-b pb-2 mb-4">Location & Vitals</h3>
-                        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                            <div>
-                                <label className="text-xs font-bold text-gray-500 uppercase">Ward</label>
-                                <input className="w-full border rounded-lg px-3 py-1.5 text-sm mt-1 bg-gray-100 text-gray-600" readOnly value={formData.ward} />
-                            </div>
-                            <div>
-                                <label className="text-xs font-bold text-gray-500 uppercase">Bed</label>
-                                <input className="w-full border rounded-lg px-3 py-1.5 text-sm mt-1 bg-gray-100 text-gray-600" readOnly value={formData.bed_number} />
-                            </div>
+                <div className="space-y-6 max-w-4xl mx-auto animate-fade-in">
+                    <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
+                        <h3 className="text-sm font-bold text-gray-500 uppercase tracking-wider border-b pb-3 mb-4">Patient & Clinical Details</h3>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
                             <div>
                                 <label className="text-xs font-bold text-gray-500 uppercase">Age</label>
-                                <input type="number" className="w-full border rounded-lg px-3 py-1.5 text-sm mt-1 bg-white text-gray-900 focus:ring-1 focus:ring-blue-500" value={formData.age} onChange={e => setFormData({...formData, age: e.target.value})} />
+                                <input type="number" className="w-full border rounded-lg px-3 py-2 text-sm mt-1 bg-white text-gray-900 focus:ring-1 focus:ring-blue-500" value={formData.age} onChange={e => setFormData({...formData, age: e.target.value})} />
                             </div>
                             <div>
                                 <label className="text-xs font-bold text-gray-500 uppercase">Sex</label>
-                                <select className="w-full border rounded-lg px-3 py-1.5 text-sm mt-1 bg-white text-gray-900 focus:ring-1 focus:ring-blue-500" value={formData.sex} onChange={e => setFormData({...formData, sex: e.target.value})}>
+                                <select className="w-full border rounded-lg px-3 py-2 text-sm mt-1 bg-white text-gray-900 focus:ring-1 focus:ring-blue-500" value={formData.sex} onChange={e => setFormData({...formData, sex: e.target.value})}>
                                     <option value="">Select</option><option value="Male">Male</option><option value="Female">Female</option>
                                 </select>
                             </div>
-                            <div>
-                                <label className="text-xs font-bold text-gray-500 uppercase">SCr (µmol/L)</label>
-                                <input type="number" className="w-full border rounded-lg px-3 py-1.5 text-sm mt-1 bg-white text-gray-900 focus:ring-1 focus:ring-blue-500" value={formData.latest_creatinine} onChange={e => setFormData({...formData, latest_creatinine: e.target.value})} />
-                            </div>
-                            <div>
-                                <label className="text-xs font-bold text-gray-500 uppercase">eGFR</label>
-                                <input type="text" className="w-full border rounded-lg px-3 py-1.5 text-sm mt-1 bg-gray-100 text-gray-600" readOnly value={formData.egfr} />
-                            </div>
                              <div>
-                                <label className="text-xs font-bold text-gray-500 uppercase">Dialysis?</label>
-                                <select className="w-full border rounded-lg px-3 py-1.5 text-sm mt-1 bg-white text-gray-900 focus:ring-1 focus:ring-blue-500" value={formData.dialysis_status} onChange={e => setFormData({...formData, dialysis_status: e.target.value as any})}>
-                                    <option value="No">No</option><option value="Yes">Yes</option>
-                                </select>
+                                <label className="text-xs font-bold text-gray-500 uppercase">SCr (µmol/L)</label>
+                                <input type="number" className="w-full border rounded-lg px-3 py-2 text-sm mt-1 bg-white text-gray-900 focus:ring-1 focus:ring-blue-500" value={formData.latest_creatinine} onChange={e => setFormData({...formData, latest_creatinine: e.target.value})} />
                             </div>
-                            <div className="md:col-span-3 lg:col-span-4">
+                            <div className="bg-gray-50 p-2 rounded-lg border border-gray-200">
+                                <label className="text-[10px] font-bold text-gray-500 uppercase">Calculated eGFR</label>
+                                <p className="text-sm font-semibold text-blue-700">{formData.egfr || 'N/A'}</p>
+                            </div>
+                            <div className="md:col-span-2">
                                 <label className="text-xs font-bold text-gray-500 uppercase">Infectious Disease Diagnosis</label>
-                                <textarea className="w-full border rounded-lg px-3 py-1.5 text-sm mt-1 bg-white text-gray-900 focus:ring-1 focus:ring-blue-500" rows={2} value={formData.infectious_diagnosis} onChange={e => setFormData({...formData, infectious_diagnosis: e.target.value})} />
-                            </div>
-                        </div>
-
-                        {/* Transfer History inside the same box */}
-                        <div className="mt-6">
-                            <div className="flex justify-between items-center mb-2">
-                                <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider">Ward Transfer History</h3>
-                                {!isTransferring && (
-                                    <button onClick={() => initTransferForm(false)} className="text-xs font-bold text-blue-600 hover:text-blue-800 bg-blue-50 px-3 py-1 rounded border border-blue-100">
-                                        Transfer
-                                    </button>
-                                )}
-                            </div>
-                            {isTransferring && (
-                                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-3 animate-fade-in">
-                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-2">
-                                        <div><label className="text-xs font-bold text-gray-500">Date & Time</label><input type="datetime-local" className="w-full border rounded px-2 py-1 text-sm mt-1 bg-white" value={transferDate} onChange={e => setTransferDate(e.target.value)}/></div>
-                                        <div><label className="text-xs font-bold text-gray-500">New Ward</label><select className="w-full border rounded px-2 py-1 text-sm mt-1 bg-white" value={transferData.to_ward} onChange={e => setTransferData({...transferData, to_ward: e.target.value})}><option value="">Select</option>{WARDS.map(w => <option key={w} value={w}>{w}</option>)}</select></div>
-                                        <div><label className="text-xs font-bold text-gray-500">New Bed</label><input type="text" className="w-full border rounded px-2 py-1 text-sm mt-1 bg-white" value={transferData.to_bed} onChange={e => setTransferData({...transferData, to_bed: e.target.value})} /></div>
-                                    </div>
-                                    <div className="flex justify-end gap-2"><button onClick={() => setIsTransferring(false)} className="px-3 py-1 bg-white border rounded text-xs font-bold">Cancel</button><button onClick={handleTransfer} className="px-3 py-1 bg-blue-600 text-white rounded text-xs font-bold">Confirm</button></div>
-                                </div>
-                            )}
-                            <div className="space-y-2">
-                                {patient.transfer_history && patient.transfer_history.length > 0 ? patient.transfer_history.map((log, idx) => (
-                                    <div key={idx} className="flex items-center justify-between text-sm bg-gray-50 p-2 rounded border group">
-                                        <div><span className="font-semibold">{log.from_ward} ({log.from_bed})</span> <span className="text-gray-400 mx-1">→</span> <span className="font-semibold">{log.to_ward} ({log.to_bed})</span></div>
-                                        <div className="flex items-center gap-2"><span className="text-xs text-gray-500">{new Date(log.date).toLocaleString()}</span><button onClick={() => initTransferForm(true, log, idx)} className="text-blue-500 opacity-0 group-hover:opacity-100"><svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg></button></div>
-                                    </div>
-                                )) : <p className="text-sm text-gray-400 italic">No transfer history.</p>}
+                                <textarea className="w-full border rounded-lg px-3 py-2 text-sm mt-1 bg-white text-gray-900 focus:ring-1 focus:ring-blue-500" rows={3} value={formData.infectious_diagnosis} onChange={e => setFormData({...formData, infectious_diagnosis: e.target.value})} />
                             </div>
                         </div>
                     </div>
-                    
-                    <div className="flex justify-between items-center pt-4 border-t border-gray-200">
-                        <div className="flex gap-3">
-                            <button onClick={() => handleDischarge('Discharged')} className="px-4 py-2 border border-gray-300 text-gray-600 rounded-lg hover:bg-gray-50 text-sm font-medium transition-colors bg-white">Discharged</button>
-                            <button onClick={() => handleDischarge('Expired')} className="px-4 py-2 border border-red-200 text-red-600 rounded-lg hover:bg-red-50 text-sm font-medium transition-colors bg-white">Expired</button>
+                     <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
+                        <div className="flex justify-between items-center mb-3">
+                            <h3 className="text-sm font-bold text-gray-500 uppercase tracking-wider">Ward Transfer History</h3>
+                            {!isTransferring && (
+                                <button onClick={() => initTransferForm(false)} className="text-xs font-bold text-blue-600 hover:text-blue-800 bg-blue-50 px-3 py-1.5 rounded-lg border border-blue-200">
+                                    Transfer Patient
+                                </button>
+                            )}
                         </div>
-                        <button onClick={handlePatientUpdate} disabled={loading} className="px-6 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-bold shadow-md hover:shadow-lg transition-all">Save Changes</button>
+                        {isTransferring && (
+                            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4 animate-fade-in">
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-3">
+                                    <div><label className="text-xs font-bold text-gray-500">Date & Time</label><input type="datetime-local" className="w-full border rounded-lg px-2 py-2 text-sm mt-1 bg-white" value={transferDate} onChange={e => setTransferDate(e.target.value)}/></div>
+                                    <div><label className="text-xs font-bold text-gray-500">New Ward</label><select className="w-full border rounded-lg px-2 py-2 text-sm mt-1 bg-white" value={transferData.to_ward} onChange={e => setTransferData({...transferData, to_ward: e.target.value})}><option value="">Select</option>{WARDS.map(w => <option key={w} value={w}>{w}</option>)}</select></div>
+                                    <div><label className="text-xs font-bold text-gray-500">New Bed</label><input type="text" className="w-full border rounded-lg px-2 py-2 text-sm mt-1 bg-white" value={transferData.to_bed} onChange={e => setTransferData({...transferData, to_bed: e.target.value})} /></div>
+                                </div>
+                                <div className="flex justify-end gap-2"><button onClick={() => setIsTransferring(false)} className="px-4 py-1.5 bg-white border rounded-lg text-xs font-bold">Cancel</button><button onClick={handleTransfer} className="px-4 py-1.5 bg-blue-600 text-white rounded-lg text-xs font-bold">Confirm Transfer</button></div>
+                            </div>
+                        )}
+                        <div className="space-y-2">
+                            {patient.transfer_history && patient.transfer_history.length > 0 ? patient.transfer_history.map((log, idx) => (
+                                <div key={idx} className="flex items-center justify-between text-sm bg-gray-50 p-3 rounded-lg border group">
+                                    <div><span className="font-semibold">{log.from_ward} ({log.from_bed})</span> <span className="text-gray-400 mx-1">→</span> <span className="font-semibold">{log.to_ward} ({log.to_bed})</span></div>
+                                    <div className="flex items-center gap-2"><span className="text-xs text-gray-500">{new Date(log.date).toLocaleString()}</span><button onClick={() => initTransferForm(true, log, idx)} className="text-blue-500 opacity-0 group-hover:opacity-100"><svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg></button></div>
+                                </div>
+                            )) : <p className="text-sm text-gray-400 italic">No transfer history.</p>}
+                        </div>
+                    </div>
+                    
+                    <div className="flex justify-between items-center pt-6 mt-6 border-t border-gray-200">
+                        <div className="flex gap-3">
+                            <button onClick={() => handleDischarge('Discharged')} className="px-4 py-2 border border-gray-300 text-gray-600 rounded-lg hover:bg-gray-50 text-sm font-medium transition-colors bg-white">Mark as Discharged</button>
+                            <button onClick={() => handleDischarge('Expired')} className="px-4 py-2 border border-red-200 text-red-600 rounded-lg hover:bg-red-50 text-sm font-medium transition-colors bg-white">Mark as Expired</button>
+                        </div>
+                        <button onClick={handlePatientUpdate} disabled={loading} className="px-6 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-bold shadow-md hover:shadow-lg transition-all">Save Patient Details</button>
                     </div>
                 </div>
             )}
@@ -872,126 +855,156 @@ const MonitoringDetailModal: React.FC<MonitoringDetailModalProps> = ({ isOpen, o
                     )}
 
                     {/* Active List */}
-                    <div className="space-y-6">
+                    <div className="space-y-4">
                         {sortedAntimicrobials.map((drug, idx) => {
                             const isStopped = drug.status === 'Stopped';
                             const isShifted = drug.status === 'Shifted';
                             const isActive = drug.status === 'Active';
-                            const statusBg = isActive ? 'bg-green-100 text-green-700' : isStopped ? 'bg-red-100 text-red-700' : isShifted ? 'bg-purple-100 text-purple-700' : 'bg-gray-100 text-gray-700';
+                            const statusBg = isActive ? 'bg-green-100 text-green-800' : isStopped ? 'bg-red-100 text-red-800' : isShifted ? 'bg-purple-100 text-purple-700' : 'bg-gray-100 text-gray-700';
                             
-                            const currentDay = calculateDay(drug.start_date);
                             const plannedDays = parseInt(drug.planned_duration || '0');
-                            const canContinue = isActive && currentDay >= plannedDays;
+                            const canContinue = isActive && calculateDay(drug.start_date) >= plannedDays;
                             const missedCount = countMissedDoses(drug.administration_log || {});
                             
-                            const therapyDay = calculateTherapyDay(drug);
+                            const totalDosesGiven = drug.administration_log ? Object.values(drug.administration_log).flat().filter(entry => normalizeLogEntry(entry).status === 'Given').length : 0;
+                            const dosesPerDay = drug.frequency_hours ? Math.max(1, Math.floor(24 / drug.frequency_hours)) : 1;
+                            const totalPlannedDoses = plannedDays * dosesPerDay;
+                            const progressPercent = totalPlannedDoses > 0 ? Math.min((totalDosesGiven / totalPlannedDoses) * 100, 100) : 0;
+
+                            const therapyDayString = calculateDoseBasedDuration(drug);
 
                             return (
                             <div key={idx} className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden flex flex-col h-full">
                                 {/* Header Row */}
-                                <div className="p-4 flex flex-col md:flex-row justify-between md:items-center gap-4 border-b border-gray-100 bg-gray-50/50">
-                                    <div className="flex items-center gap-3">
-                                        <h4 className="font-bold text-xl text-gray-800">{drug.drug_name}</h4>
-                                        <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide ${statusBg}`}>
-                                            {drug.status}
-                                        </span>
-                                        {missedCount > 0 && (
-                                            <span className="text-[10px] font-bold text-red-600 bg-red-100 px-2 py-0.5 rounded border border-red-200">
-                                                {missedCount} Missed
+                                <div className="p-4 flex flex-col gap-2 border-b border-gray-100 bg-gray-50/50">
+                                    <div className="flex justify-between items-start">
+                                        <div className="flex items-center gap-3">
+                                            <h4 className="font-extrabold text-lg text-gray-800">{drug.drug_name}</h4>
+                                            <span className={`px-2.5 py-1 rounded-full text-xs font-bold uppercase tracking-wide ${statusBg}`}>
+                                                {drug.status}
                                             </span>
-                                        )}
-                                        {isActive && (
-                                            <button onClick={() => handleEditDrug(drug)} className="text-gray-400 hover:text-blue-600 transition-colors">
-                                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
-                                            </button>
-                                        )}
-                                    </div>
-                                    <div className="flex items-center gap-6">
-                                        <div className="text-right">
-                                            <span className="block text-[10px] font-bold text-gray-400 uppercase">Therapy Duration</span>
-                                            <span className="font-mono font-bold text-blue-700 text-lg">{therapyDay}</span>
+                                            {isActive && (
+                                                <button onClick={() => handleEditDrug(drug)} className="text-gray-400 hover:text-blue-600 transition-colors">
+                                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+                                                </button>
+                                            )}
                                         </div>
-                                        {drug.sensitivity_info && (
-                                            <div className="text-right border-l pl-4 border-gray-200">
-                                                <span className="block text-[10px] font-bold text-gray-400 uppercase">Sensitivity</span>
-                                                <span className="text-xs font-bold text-purple-700 block max-w-[150px] truncate" title={drug.sensitivity_info}>{drug.sensitivity_info}</span>
-                                                <span className="text-[10px] text-gray-500">{drug.sensitivity_date}</span>
-                                            </div>
-                                        )}
+                                        {/* Alert Icons */}
+                                        <div className="flex items-center gap-2">
+                                            {missedCount > 0 && (
+                                                <div className="flex items-center gap-1 bg-red-100 text-red-700 text-xs font-bold px-2 py-1 rounded-full border border-red-200">
+                                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" /></svg>
+                                                    {missedCount} Missed
+                                                </div>
+                                            )}
+                                            {drug.sensitivity_info && (
+                                                 <div className={`flex items-center gap-1 text-xs font-bold px-2 py-1 rounded-full border ${drug.sensitivity_info.toLowerCase().includes('resist') ? 'bg-red-100 text-red-700 border-red-200' : 'bg-green-100 text-green-700 border-green-200'}`}>
+                                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path d="M5.5 16.5a4.5 4.5 0 119 0 4.5 4.5 0 01-9 0zM10 20a5.5 5.5 0 100-11 5.5 5.5 0 000 11zM10 7a.5.5 0 00-1 0v1.333a.5.5 0 001 0V7zM10 4.5a.5.5 0 00-1 0v1a.5.5 0 001 0v-1zM7 10a.5.5 0 000 1h-.333a.5.5 0 000-1H7zM4.5 10a.5.5 0 000 1H3a.5.5 0 000-1h1.5zM13 10a.5.5 0 000 1h.333a.5.5 0 000-1H13zM15.5 10a.5.5 0 000 1H17a.5.5 0 000-1h-1.5z" /></svg>
+                                                    {drug.sensitivity_info}
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                    {/* Progress Bar */}
+                                    <div className="w-full bg-gray-200 rounded-full h-2">
+                                        <div className="bg-blue-600 h-2 rounded-full" style={{ width: `${progressPercent}%` }}></div>
+                                    </div>
+                                    <div className="flex justify-between text-xs font-semibold text-gray-500">
+                                        <span className="font-bold text-blue-700">{therapyDayString}</span>
+                                        <span>Plan: {plannedDays > 0 ? `${plannedDays} Days` : 'N/A'}</span>
                                     </div>
                                 </div>
                                 
                                 <div className="grid grid-cols-1 lg:grid-cols-2 divide-y lg:divide-y-0 lg:divide-x divide-gray-100">
-                                    <div className="lg:col-span-1 p-3 bg-white flex flex-col justify-between">
-                                        <div className="grid grid-cols-2 gap-x-3 gap-y-2 text-sm">
+                                    <div className="lg:col-span-1 p-5 bg-white flex flex-col justify-between">
+                                        <div className="grid grid-cols-2 gap-y-4 mb-4">
                                             <div className="col-span-2">
-                                                <span className="text-[9px] font-bold text-gray-400 uppercase block">Regimen</span>
+                                                <span className="text-xs font-bold text-gray-400 uppercase">Regimen</span>
                                                 <p className="font-bold text-gray-800 text-sm">{drug.dose} {drug.route} {drug.frequency}</p>
                                             </div>
                                             <div>
-                                                <span className="text-[9px] font-bold text-gray-400 uppercase block">Start Date</span>
-                                                <p className="font-bold text-gray-800 text-xs">{drug.start_date}</p>
+                                                <span className="text-xs font-bold text-gray-400 uppercase">Start Date</span>
+                                                <p className="font-medium text-gray-700 text-sm">{drug.start_date}</p>
                                             </div>
                                             <div>
-                                                <span className="text-[9px] font-bold text-gray-400 uppercase block">Plan</span>
-                                                <p className="font-bold text-gray-800 text-xs">{drug.planned_duration ? `${drug.planned_duration} Days` : 'N/A'}</p>
+                                                <span className="text-xs font-bold text-gray-400 uppercase">Planned Duration</span>
+                                                <p className="font-medium text-gray-700 text-sm">{drug.planned_duration ? `${drug.planned_duration} Days` : 'N/A'}</p>
                                             </div>
                                             <div>
-                                                <span className="text-[9px] font-bold text-gray-400 uppercase block">Resident</span>
-                                                <p className="font-medium text-gray-800 truncate text-xs">{drug.requesting_resident || 'N/A'}</p>
+                                                <span className="text-xs font-bold text-gray-400 uppercase">Resident</span>
+                                                <p className="font-medium text-gray-700 truncate text-sm">{drug.requesting_resident || 'N/A'}</p>
                                             </div>
                                             <div>
-                                                <span className="text-[9px] font-bold text-gray-400 uppercase block">IDS In-charge</span>
-                                                <p className="font-medium text-gray-800 truncate text-xs">{drug.ids_in_charge || 'N/A'}</p>
+                                                <span className="text-xs font-bold text-gray-400 uppercase">IDS In-charge</span>
+                                                <p className="font-medium text-gray-700 truncate text-sm">{drug.ids_in_charge || 'N/A'}</p>
                                             </div>
                                         </div>
 
                                         {(isStopped || isShifted) && (
-                                            <div className="mt-2 pt-2 border-t border-red-100 bg-red-50/50 -mx-3 px-3 pb-2">
-                                                <span className="text-[9px] font-bold text-red-400 uppercase block">Reason</span>
-                                                <p className="text-xs font-bold text-red-800">{isStopped ? drug.stop_reason : drug.shift_reason || 'N/A'}</p>
-                                                <p className="text-[10px] text-gray-500">{new Date(drug.stop_date || drug.shifted_at || '').toLocaleString()}</p>
+                                            <div className="mt-2 pt-2 border-t border-red-100 bg-red-50/50 -mx-5 px-5 pb-2">
+                                                <span className="text-xs font-bold text-red-500 uppercase block">Reason</span>
+                                                <p className="text-sm font-bold text-red-800">{isStopped ? drug.stop_reason : drug.shift_reason || 'N/A'}</p>
+                                                <p className="text-xs text-gray-500">{new Date(drug.stop_date || drug.shifted_at || '').toLocaleString()}</p>
                                             </div>
                                         )}
-
-                                        {isActive ? (
-                                            <div className="mt-3 pt-2 border-t border-gray-100">
-                                                <div className="flex justify-end mb-2"><button onClick={() => openSensitivityModal(drug)} className="text-xs text-blue-600 font-bold hover:underline"> {drug.sensitivity_info ? 'Edit' : '+'} Sensitivity</button></div>
-                                                <div className="grid grid-cols-2 gap-2">
-                                                    {canContinue && <button onClick={() => initiateStatusChange(drug.id, 'Continue')} className="py-1.5 bg-blue-600 text-white rounded text-[10px] font-bold col-span-2">Continue</button>}
-                                                    <button onClick={() => initiateStatusChange(drug.id, 'Dose Change')} className="py-1.5 bg-teal-600 text-white rounded text-[10px] font-bold">Dose Changed</button>
-                                                    <button onClick={() => initiateStatusChange(drug.id, 'Shifted')} className="py-1.5 bg-amber-500 text-white rounded text-[10px] font-bold">Shifted</button>
-                                                    <button onClick={() => initiateStatusChange(drug.id, 'Completed')} className="py-1.5 bg-emerald-600 text-white rounded text-[10px] font-bold">Complete</button>
-                                                    <button onClick={() => initiateStatusChange(drug.id, 'Stopped')} className="py-1.5 bg-red-600 text-white rounded text-[10px] font-bold">Stop Order</button>
+                                        
+                                        {/* Action Buttons */}
+                                        <div className="mt-auto pt-2">
+                                             {isActive ? (
+                                                <>
+                                                 <div className="flex justify-end mb-2">
+                                                    <button onClick={() => openSensitivityModal(drug)} className="text-xs text-blue-600 font-bold hover:underline bg-gray-100 hover:bg-gray-200 px-2 py-1 rounded-md transition-colors flex items-center gap-1">
+                                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path d="M5.5 16.5a4.5 4.5 0 119 0 4.5 4.5 0 01-9 0zM10 20a5.5 5.5 0 100-11 5.5 5.5 0 000 11zM10 7a.5.5 0 00-1 0v1.333a.5.5 0 001 0V7zM10 4.5a.5.5 0 00-1 0v1a.5.5 0 001 0v-1zM7 10a.5.5 0 000 1h-.333a.5.5 0 000-1H7zM4.5 10a.5.5 0 000 1H3a.5.5 0 000-1h1.5zM13 10a.5.5 0 000 1h.333a.5.5 0 000-1H13zM15.5 10a.5.5 0 000 1H17a.5.5 0 000-1h-1.5z" /></svg>
+                                                        {drug.sensitivity_info ? 'Edit' : 'Add'} Sensitivity
+                                                    </button>
+                                                 </div>
+                                                 <div className="grid grid-cols-2 gap-2">
+                                                    <button onClick={() => initiateStatusChange(drug.id, 'Dose Change')} className="py-2 bg-teal-600 text-white rounded-lg text-xs font-bold shadow-sm hover:shadow-md transition-all">Dose Change</button>
+                                                    <button onClick={() => initiateStatusChange(drug.id, 'Shifted')} className="py-2 bg-amber-500 text-white rounded-lg text-xs font-bold shadow-sm hover:shadow-md transition-all">Shifted</button>
+                                                    {canContinue && <button onClick={() => initiateStatusChange(drug.id, 'Continue')} className="py-2 bg-blue-600 text-white rounded-lg text-xs font-bold col-span-2 shadow-sm hover:shadow-md transition-all">Continue Therapy</button>}
+                                                    <button onClick={() => initiateStatusChange(drug.id, 'Completed')} className="py-2 bg-emerald-600 text-white rounded-lg text-xs font-bold shadow-sm hover:shadow-md transition-all">Complete</button>
+                                                    <button onClick={() => initiateStatusChange(drug.id, 'Stopped')} className="py-2 bg-red-600 text-white rounded-lg text-xs font-bold shadow-sm hover:shadow-md transition-all">Stop Order</button>
                                                 </div>
-                                            </div>
-                                        ) : (
-                                            <div className="mt-2 pt-2 border-t border-gray-100"><button onClick={() => setUndoModal({ isOpen: true, drugId: drug.id })} className="text-xs text-blue-500 hover:text-blue-700 font-medium underline">Undo Status Change</button></div>
-                                        )}
+                                                </>
+                                             ) : (
+                                                <div className="mt-2 pt-2 border-t border-gray-100"><button onClick={() => setUndoModal({ isOpen: true, drugId: drug.id })} className="text-sm text-blue-500 hover:text-blue-700 font-medium underline">Undo Status Change</button></div>
+                                             )}
+                                        </div>
                                     </div>
 
-                                    <div className="lg:col-span-1 bg-gray-50 flex flex-col h-full overflow-hidden" style={{ maxHeight: '22rem' }}>
-                                        <div className="p-3 border-b border-gray-200 bg-gray-100 flex justify-between items-center shrink-0"><span className="text-xs font-bold text-gray-500 uppercase">Administration Log</span></div>
-                                        <div className="flex-1 overflow-y-auto p-3 space-y-0">
-                                            {getDatesForLog(drug.start_date, drug.stop_date || drug.completed_at || drug.shifted_at).sort((a, b) => b.getTime() - a.getTime()).slice(0, 6).map((dateObj, i) => {
+                                    {/* VISUAL ADMIN LOG */}
+                                    <div className="lg:col-span-1 bg-gray-50 flex flex-col h-full overflow-hidden" style={{ minHeight: '20rem' }}>
+                                        <div className="px-3 py-2 border-b border-gray-200 bg-gray-100 flex justify-between items-center shrink-0"><span className="text-xs font-bold text-gray-500 uppercase">Administration Log</span></div>
+                                        <div className="flex-1 overflow-y-auto p-2 space-y-1">
+                                            {getDatesForLog(drug.start_date, drug.stop_date || drug.completed_at || drug.shifted_at).sort((a, b) => b.getTime() - a.getTime()).slice(0, 10).map((dateObj, i) => {
                                                 const dateStr = dateObj.toISOString().split('T')[0];
                                                 const logs = drug.administration_log?.[dateStr] || [];
                                                 const dayNum = getDayNumber(drug.start_date, dateObj);
-                                                const slots = drug.frequency_hours ? Math.floor(24 / drug.frequency_hours) : 1;
+                                                const slots = drug.frequency_hours ? Math.max(1, Math.floor(24 / drug.frequency_hours)) : 1;
                                                 const slotArray = Array.from({length: slots});
 
                                                 return (
-                                                    <div key={dateStr} className="flex items-center text-sm border-b border-gray-200 py-3 last:border-0 hover:bg-gray-100/50 transition-colors px-2">
-                                                        <div className="w-20 shrink-0 text-right border-r border-gray-300 pr-3"><span className="block font-bold text-gray-700 text-xs">Day {dayNum}</span><span className="block text-[10px] text-gray-500">{dateObj.toLocaleDateString('en-US', {weekday:'short', month:'short', day:'numeric'})}</span></div>
-                                                        <div className="flex-1 flex flex-wrap gap-2 items-center pl-3">
+                                                    <div key={dateStr} className="grid grid-cols-4 gap-1 text-sm items-start py-1.5 border-b border-gray-200/80 last:border-0">
+                                                        <div className="col-span-1 text-right pr-2">
+                                                            <span className="block font-bold text-gray-700 text-xs">Day {dayNum}</span>
+                                                            <span className="block text-[10px] text-gray-500">{dateObj.toLocaleDateString('en-US', {weekday:'short', month:'short', day:'numeric'})}</span>
+                                                        </div>
+                                                        <div className="col-span-3 flex-1 flex flex-wrap gap-1.5 items-center">
                                                             {slotArray.map((_, sIdx) => {
                                                                 const entry = logs[sIdx];
                                                                 const logData = entry ? normalizeLogEntry(entry) : null;
                                                                 if (logData) {
                                                                     const isMissed = logData.status === 'Missed';
-                                                                    return (<div key={sIdx} className={`relative group inline-flex items-center gap-1 border px-2 py-1 rounded text-xs font-mono shadow-sm cursor-default ${isMissed ? 'bg-red-50 border-red-200 text-red-700' : 'bg-white border-gray-200 text-gray-700'}`}>{isMissed ? 'Missed' : logData.time}{isActive && <button onClick={() => handleDeleteLogTime(drug.id, dateStr, sIdx)} className="text-red-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity ml-1">&times;</button>}{isMissed && logData.reason && (<div className="absolute bottom-full mb-1 left-1/2 -translate-x-1/2 bg-black text-white text-[10px] p-1 rounded opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap z-10">{logData.reason}</div>)}</div>);
+                                                                    return (
+                                                                        <div key={sIdx} className="relative group inline-flex items-center gap-1 px-2 py-1 rounded-md shadow-sm cursor-default bg-white border">
+                                                                            {isMissed ? <span className="text-red-500">❌</span> : <span className="text-green-500">✅</span>}
+                                                                            <span className={`font-mono text-xs ${isMissed ? 'text-red-700' : 'text-gray-700'}`}>{isMissed ? 'Missed' : logData.time}</span>
+                                                                            {isActive && <button onClick={() => handleDeleteLogTime(drug.id, dateStr, sIdx)} className="absolute -top-1.5 -right-1.5 bg-red-500 text-white rounded-full h-4 w-4 flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity">&times;</button>}
+                                                                            {isMissed && logData.reason && (<div className="absolute bottom-full mb-1 left-1/2 -translate-x-1/2 bg-black text-white text-xs p-1 rounded opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap z-10">{logData.reason}</div>)}
+                                                                        </div>
+                                                                    );
                                                                 } else {
-                                                                    return isActive ? (<button key={sIdx} onClick={() => {setAdminModal({ isOpen: true, drugId: drug.id, dateStr, slotIndex: sIdx }); setAdminTime(''); setAdminStatus('Given');}} className="w-16 h-6 border border-dashed border-gray-300 rounded bg-gray-50 hover:bg-blue-50 hover:border-blue-300 transition-colors flex items-center justify-center text-gray-400 hover:text-blue-500"><span className="text-[10px]">+</span></button>) : <span key={sIdx} className="w-16 h-6 border border-transparent"></span>;
+                                                                    return isActive ? (<button key={sIdx} onClick={() => {setAdminModal({ isOpen: true, drugId: drug.id, dateStr, slotIndex: sIdx }); setAdminTime(''); setAdminStatus('Given');}} className="w-8 h-8 border-2 border-dashed border-gray-300 rounded-lg bg-gray-50 hover:bg-blue-50 hover:border-blue-300 transition-colors flex items-center justify-center text-gray-400 hover:text-blue-500"><span className="text-lg">+</span></button>) : <div key={sIdx} className="w-8 h-8"></div>;
                                                                 }
                                                             })}
                                                         </div>

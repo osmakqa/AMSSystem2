@@ -279,6 +279,26 @@ export const fetchMonitoringPatients = async (statusFilter: string = 'Admitted')
   }
 };
 
+export const fetchAllMonitoringPatients = async (): Promise<{ data: MonitoringPatient[], error: string | null }> => {
+  try {
+    const { data, error } = await supabase
+      .from('monitoring_patients')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (error) {
+       if (error.code === '42P01' || error.code === 'PGRST205') { 
+         console.warn("Monitoring table does not exist yet.");
+         return { data: [], error: "Monitoring Table Missing" };
+       }
+       return { data: [], error: error.message };
+    }
+    return { data: data as MonitoringPatient[], error: null };
+  } catch (err: any) {
+    return { data: [], error: err instanceof Error ? err.message : "Unknown error" };
+  }
+};
+
 export const createMonitoringPatient = async (patient: Partial<MonitoringPatient>) => {
   try {
     const { data, error } = await supabase
