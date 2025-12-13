@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { DrugType, PrescriptionStatus } from '../types'; // Removed Prescription type from imports as we use 'any' for form data or we can import it
-import { IDS_SPECIALISTS_ADULT, IDS_SPECIALISTS_PEDIATRIC } from '../constants';
+import { IDS_SPECIALISTS_ADULT, IDS_SPECIALISTS_PEDIATRIC, WARDS } from '../constants';
 import { ADULT_MONOGRAPHS } from '../data/adultMonographs';
 import { PEDIATRIC_MONOGRAPHS } from '../data/pediatricMonographs';
 import { checkRenalDosing, verifyWeightBasedDosing, verifyPediatricDosing } from '../services/geminiService'; // Import AI
@@ -14,7 +14,7 @@ interface AntimicrobialRequestFormProps {
   initialData?: any; // New prop for editing
 }
 
-// ... existing constants (CLINICAL_DEPARTMENTS, WARDS) ...
+// ... existing constants (CLINICAL_DEPARTMENTS) ...
 const CLINICAL_DEPARTMENTS = [
   "Internal Medicine",
   "Surgery",
@@ -25,27 +25,6 @@ const CLINICAL_DEPARTMENTS = [
   "Obstetrics and Gynecology",
   "Ophthalmology",
   "Physical and Rehabilitation Medicine"
-];
-
-const WARDS = [
-  "6th Floor Ward",
-  "ARI 2",
-  "Dengue Ward",
-  "ER Holding",
-  "ER Isolation",
-  "ICU",
-  "Infectious Ward",
-  "Medicine Female",
-  "Medicine Male",
-  "Medicine Isolation Room",
-  "NICU",
-  "Pedia ICU",
-  "Pedia Ward 3",
-  "Pedia Ward 1 Stepdown",
-  "Respiratory ICU",
-  "SARI",
-  "Surgery Female",
-  "Surgery Male"
 ];
 
 const calcCkdEpi2021 = (age: number, sex: string, scr: number) => {

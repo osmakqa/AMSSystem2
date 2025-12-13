@@ -1,3 +1,4 @@
+
 export enum UserRole {
   PHARMACIST = 'PHARMACIST',
   IDS = 'IDS',
@@ -126,4 +127,95 @@ export interface AMSAudit {
   antimicrobials: any[]; 
   microorganisms: any[];
   audit_findings?: AuditFinding[]; // New field for sectional notes (Reviewer Findings)
+}
+
+// --- AMS MONITORING TYPES ---
+
+export interface TransferLog {
+  date: string;
+  from_ward: string;
+  to_ward: string;
+  from_bed: string;
+  to_bed: string;
+}
+
+export interface AdminLogEntry {
+  time: string; // "08:00 AM"
+  status: 'Given' | 'Missed';
+  reason?: string; // If missed
+}
+
+export interface ChangeLogEntry {
+  date: string;
+  type: 'Dose Change' | 'Status Change';
+  oldValue?: string;
+  newValue?: string;
+  reason?: string;
+}
+
+export interface MonitoringAntimicrobial {
+  id: string;
+  drug_name: string;
+  dose: string;
+  route: string;
+  
+  frequency: string; // Display string (e.g. "Every 8 hours")
+  frequency_hours?: number; // Numeric hours (e.g. 8)
+  
+  // Key: Date string (YYYY-MM-DD), Value: Array of mixed types (string for legacy, AdminLogEntry for new)
+  // We will treat string as { time: string, status: 'Given' } in the UI
+  administration_log?: Record<string, (string | AdminLogEntry)[]>; 
+  
+  planned_duration: string;
+  start_date: string;
+  
+  requesting_resident: string; // Could be multiple over time, but start with initial
+  ids_in_charge: string;
+  date_referred_ids?: string;
+  
+  culture_result?: string;
+  doses_not_given?: string; // Count or details
+  reason_not_given?: string;
+  
+  status: 'Active' | 'Completed' | 'Stopped' | 'Shifted';
+  
+  // Timestamps for status changes (ISO strings)
+  stop_date?: string;
+  completed_at?: string; 
+  shifted_at?: string;
+
+  // New Fields for Reasons & Sensitivity
+  stop_reason?: string;
+  shift_reason?: string;
+  sensitivity_info?: string;
+  sensitivity_date?: string;
+
+  // Change History
+  change_history?: ChangeLogEntry[];
+}
+
+export interface MonitoringPatient {
+  id: number; // Supabase ID
+  created_at?: string;
+  patient_name: string;
+  hospital_number: string; // Can serve as bed number if needed, or add bed_number
+  ward: string;
+  bed_number: string;
+  age: string;
+  sex: string;
+  date_of_admission: string;
+  
+  latest_creatinine: string;
+  egfr: string; // Auto-calculated
+  
+  infectious_diagnosis: string;
+  dialysis_status: 'Yes' | 'No';
+  
+  antimicrobials: MonitoringAntimicrobial[]; // JSONB array
+  transfer_history?: TransferLog[]; // History of ward movements
+  
+  status: 'Admitted' | 'Discharged' | 'Expired';
+  discharged_at?: string;
+  
+  last_updated_by?: string; // Pharmacist name who last edited
 }

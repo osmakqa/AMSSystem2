@@ -7,8 +7,21 @@ The **Osmak Antimicrobial Stewardship (AMS) System** is a digital platform desig
 
 ## **2. Getting Started**
 
+### **System Access**
+The system is accessible via web browser. The login screen provides role-based access and quick-action buttons for common tasks.
+
+*   **View System Workflow:** Click this link at the bottom of the login screen to see a visual diagram of the prescription approval process and status lifecycles.
+*   **View User Manual:** Click this link to open this documentation at any time.
+
 ### **Login Credentials**
-Log in using the credentials provided by the AMS Committee or IT Department. Passwords are case-sensitive and typically follow a predictable format (all lowercase). If you have forgotten your password, please contact the system administrator.
+Log in using the credentials provided by the AMS Committee or IT Department. Passwords are case-sensitive and typically follow a predictable format (all lowercase).
+
+| User Role | Password Format | Example |
+| :--- | :--- | :--- |
+| **Resident** | `doctor123` | `doctor123` |
+| **Pharmacist** | `[lastname]123` | `abello123` |
+| **ID Specialist** | `[lastname]456` | `tibayan456` |
+| **AMS Admin** | `ams123` | `ams123` |
 
 ---
 
@@ -28,7 +41,7 @@ Log in using the credentials provided by the AMS Committee or IT Department. Pas
 
 ### **Option B: Resident Dashboard (Login)**
 1.  Select the **"Resident"** tab on the login screen.
-2.  Enter your assigned password (`doctor123` by default).
+2.  Enter your assigned password.
 3.  **Disapproved Requests**: Your dashboard displays all your requests that were rejected by Pharmacy or IDS.
     *   Use the **Month** and **Year** filters to narrow down the list.
     *   Click on a disapproved request card to view detailed information, including any **Review Findings** added by the reviewing pharmacist or IDS specialist.
@@ -79,18 +92,23 @@ Log in using the credentials provided by the AMS Committee or IT Department. Pas
 
 ---
 
-## **6. Guide for AMS Admins**
+## **6. Guide for AMS Admins / Auditors**
 
-### **Data Analysis**
+### **Option A: Quick Audit Tool (No Login)**
+1.  On the Login Page, select the **"AMS"** tab.
+2.  Click the **"AMS Audit Tool"** button that appears below the login form.
+3.  This opens the **New Audit Form** immediately, allowing for rapid data entry during clinical rounds without navigating the full dashboard.
+    *   *Note:* Ensure you select your name in the "Auditor" dropdown manually.
+
+### **Option B: Full Dashboard Access (Login)**
 *   Log in as **AMS**. The default tab opens to the comprehensive **"Data Analysis"** dashboard.
 *   **Filters:** Use the **Month** and **Year** dropdowns to filter data. You can also filter by **Patient Mode** (Adult/Pediatric).
 *   **Charts:** View overall request volume, approval rates, breakdown of restricted vs. monitored drugs, top antimicrobials, pharmacy performance metrics, and IDS turnaround times.
 *   **Export:** Click on any chart title to open a modal displaying the underlying data. From this modal, you can click **"Export to CSV"** to download the raw data for further analysis.
-*   You can also navigate to dedicated tabs for "Restricted", "Monitored", or "All" requests to view tables with these specific subsets of data.
 
-### **AMS Audit Tool**
-1.  Click the **"AMS Audit"** tab. This displays a table of all past audit records.
-2.  **New Audit:** Click the **"New Audit"** button.
+### **Managing Audits**
+1.  Click the **"AMS Audit"** tab inside the dashboard. This displays a table of all past audit records.
+2.  **New Audit:** Click the **"New Audit"** button (if not using the Quick Tool).
     *   Fill in **Audit Information** (Auditor, Area, Date, Shift).
     *   Enter **Patient Information** (Hospital No., DOB, Sex, Weight, SCr). The system will **auto-calculate eGFR** based on the patient's age (from DOB), sex, weight, height (if pediatric), and SCr.
     *   Document **Diagnostics & Biomarkers** and **Recent History**.
@@ -109,5 +127,3 @@ Log in using the credentials provided by the AMS Committee or IT Department. Pas
 ## **7. Troubleshooting**
 *   **"Database Error"**: This indicates an issue with the application's connection to the database. Please contact IT support (e.g., IPC department) immediately.
 *   **"Loading..." hangs**: If the application remains stuck on a loading screen, try refreshing the page. Ensure you have a stable internet connection.
-
----

@@ -46,6 +46,40 @@ export const IDS_SPECIALISTS = [
   ...IDS_SPECIALISTS_PEDIATRIC
 ].sort();
 
+export const WARDS = [
+  "6th Floor Ward",
+  "ARI 2",
+  "Dengue Ward",
+  "ER Holding",
+  "ER Isolation",
+  "ICU",
+  "Infectious Ward",
+  "Medicine Female",
+  "Medicine Male",
+  "Medicine Isolation Room",
+  "NICU",
+  "Pedia ICU",
+  "Pedia Ward 3",
+  "Pedia Ward 1 Stepdown",
+  "Respiratory ICU",
+  "SARI",
+  "Surgery Female",
+  "Surgery Male"
+];
+
+export const MONITORED_DRUGS = [
+  "Imipenem", "Meropenem", "Ertapenem", "Doripenem", "Gentamicin", 
+  "Amikacin", "Ciprofloxacin", "Levofloxacin", "Moxifloxacin", 
+  "Aztreonam", "Ceftolozane-Tazobactam", "Colistin", "Linezolid", 
+  "Tigecycline", "Vancomycin", "Cefepime"
+].sort();
+
+export const RESTRICTED_DRUGS = [
+  "Ciprofloxacin", "Levofloxacin", "Moxifloxacin", "Ceftriaxone", 
+  "Cefotaxime", "Ceftazidime", "Cefixime", "Cefpodoxime", 
+  "Gentamicin", "Amikacin", "Clindamycin"
+].sort();
+
 export const DEFAULT_PASSWORD = "osmak123";
 
 export const LOGO_URL = "https://maxterrenal-hash.github.io/amsone/osmaklogo.png";
@@ -55,7 +89,4 @@ export const SUPABASE_URL = "https://dofdxmkqqlsmvjchgdwe.supabase.co";
 export const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRvZmR4bWtxcWxzbXZqY2hnZHdlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQxMTkyODAsImV4cCI6MjA3OTY5NTI4MH0.tnBC--0vLTidLhtJOgmU90s769j4W3iksdvmnGZdoPQ";
 
 // Google Apps Script Web App URL for Sheets backup
-// IMPORTANT: Replace this with YOUR deployed Google Apps Script Web App URL.
-// The Apps Script should be configured to accept POST requests and write to the specified Google Sheet.
-// For example: https://script.google.com/macros/s/AKfycbxxxx/exec
 export const GOOGLE_SHEET_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzc3oDXYvKL89d38VZQDnakrxJu5H_P4LVtKLc3QEZSUgks8Xzc2nS9dbUPECu4374WHg/exec";

@@ -6,27 +6,11 @@ import AMSAuditSummary from './AMSAuditSummary';
 import { checkRenalDosing, verifyWeightBasedDosing, verifyPediatricDosing } from '../services/geminiService';
 import { ADULT_MONOGRAPHS } from '../data/adultMonographs';
 import { PEDIATRIC_MONOGRAPHS } from '../data/pediatricMonographs';
+import { MONITORED_DRUGS, RESTRICTED_DRUGS, WARDS } from '../constants'; // Import drug lists
 
 // --- CONSTANTS ---
 const AREAS = [
-  "6th Floor Ward",
-  "ARI 2",
-  "Dengue Ward",
-  "ER Holding",
-  "ER Isolation",
-  "ICU",
-  "Infectious Ward",
-  "Medicine Female",
-  "Medicine Male",
-  "Medicine Isolation Room",
-  "NICU",
-  "Pedia ICU",
-  "Pedia Ward 3",
-  "Pedia Ward 1 Stepdown",
-  "Respiratory ICU",
-  "SARI",
-  "Surgery Female",
-  "Surgery Male",
+  ...WARDS,
   "Others (Specify)"
 ];
 
@@ -40,9 +24,6 @@ const SP_TYPES_OPTIONS = ["SP1", "SP2", "SP3"];
 
 const RES_TYPES = ["MRSA", "MRCoNS", "PNSP", "MLS", "VRE", "ESBL", "3GCREB", "CRE", "ESBL-NF", "CR-NF", "other MDRO"];
 const MISS_REASONS = ["stock out", "could not purchase", "patient refused", "other reason", "multiple reasons", "unknown"];
-
-const MONITORED_DRUGS = ["Imipenem", "Meropenem", "Ertapenem", "Doripenem", "Gentamicin", "Amikacin", "Ciprofloxacin", "Levofloxacin", "Moxifloxacin", "Aztreonam", "Ceftolozane-Tazobactam", "Colistin", "Linezolid", "Tigecycline", "Vancomycin", "Cefepime"];
-const RESTRICTED_DRUGS = ["Ciprofloxacin", "Levofloxacin", "Moxifloxacin", "Ceftriaxone", "Cefotaxime", "Ceftazidime", "Cefixime", "Cefpodoxime", "Gentamicin", "Amikacin", "Clindamycin"];
 
 const DIAG_PRIMARY = ["Therapeutic", "Prophylaxis", "Neonates"];
 
@@ -148,6 +129,7 @@ const CODE_DESCRIPTIONS: Record<string, string> = {
   "OTH": "Any other use. Example: erythromycin as a motility agent (motilin agonist).",
 };
 
+// ... (Rest of component remains same) ...
 // --- HELPERS FOR eGFR CALCULATION ---
 const calcCkdEpi2021 = (age: number, sex: string, scr: number) => {
   const k = sex === "Female" ? 0.7 : 0.9;

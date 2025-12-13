@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import Login from './components/Login';
 import Layout from './components/Layout';
@@ -15,6 +16,7 @@ import AntimicrobialRequestForm from './components/AntimicrobialRequestForm';
 import AMSAuditForm from './components/AMSAuditForm'; 
 import AMSAuditTable from './components/AMSAuditTable'; 
 import AMSAuditDetailModal from './components/AMSAuditDetailModal'; 
+import AMSMonitoring from './components/AMSMonitoring'; // Import new component
 import { User, UserRole, Prescription, PrescriptionStatus, ActionType, DrugType, AMSAudit } from './types';
 import { 
   fetchPrescriptions, 
@@ -58,9 +60,9 @@ const FilterControls = ({ selectedMonth, onMonthChange, selectedYear, onYearChan
 }
 
 const tabsConfig: Record<UserRole, string[]> = {
-  [UserRole.PHARMACIST]: ['Pending', 'Approved', 'Disapproved', 'For IDS Approval', 'Data Analysis'],
-  [UserRole.IDS]: ['Pending', 'Approved Restricted', 'Disapproved Restricted'],
-  [UserRole.AMS_ADMIN]: ['Data Analysis', 'Restricted', 'Monitored', 'All', 'AMS Audit'],
+  [UserRole.PHARMACIST]: ['Pending', 'History', 'AMS Monitoring', 'Data Analysis'], 
+  [UserRole.IDS]: ['Pending', 'History'],
+  [UserRole.AMS_ADMIN]: ['Data Analysis', 'Restricted', 'Monitored', 'Antimicrobials', 'AMS Audit'],
   [UserRole.RESIDENT]: ['Disapproved'],
 };
 
@@ -94,6 +96,8 @@ function App() {
   // Filters
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+  const [historyStatusFilter, setHistoryStatusFilter] = useState<string>('Approved'); // Default for History tab
+  const [drugTypeFilter, setDrugTypeFilter] = useState<string>('All'); // Filter for Admin Antimicrobials tab
 
   useEffect(() => {
     if (user) {
@@ -376,18 +380,15 @@ function App() {
   };
 
   const getFilteredDataForCurrentView = () => {
-    const isIdsUnfilteredView = user?.role === UserRole.IDS && (activeTab === 'Approved Restricted' || activeTab === 'Disapproved Restricted');
+    const isIdsUnfilteredView = user?.role === UserRole.IDS && (activeTab === 'History');
     const isPendingView = activeTab === 'Pending';
     const isAmsAdminView = user?.role === UserRole.AMS_ADMIN;
-    
-    // Resident View Filter: Only Disapproved, filtered by Month/Year
     const isResidentView = user?.role === UserRole.RESIDENT;
     
     let items = data;
 
     // Apply date filtering for everyone EXCEPT Pending tab or specific admin views
-    // For Residents, we ALWAYS apply the date filter to their disapproved list
-    if (isResidentView || (!isPendingView && !isIdsUnfilteredView && !(isAmsAdminView && (activeTab === 'Data Analysis' || activeTab === 'AMS Audit')))) {
+    if (isResidentView || (!isPendingView && !(isAmsAdminView && (activeTab === 'Data Analysis' || activeTab === 'AMS Audit')))) {
       items = items.filter(item => {
         const itemDate = item.req_date ? new Date(item.req_date) : new Date(item.created_at || Date.now());
         const monthMatch = selectedMonth === -1 || itemDate.getMonth() === selectedMonth;
@@ -400,23 +401,30 @@ function App() {
       switch (activeTab) {
         case 'Pending': 
           return items.filter(i => statusMatches(i.status, PrescriptionStatus.PENDING));
-        case 'Approved': 
-          return items.filter(i => statusMatches(i.status, PrescriptionStatus.APPROVED) && i.drug_type === DrugType.MONITORED);
-        case 'Disapproved': 
-          return items.filter(i => 
-            statusMatches(i.status, PrescriptionStatus.DISAPPROVED) && 
-            (i.drug_type === DrugType.MONITORED || (i.drug_type === DrugType.RESTRICTED && !i.ids_disapproved_at))
-          );
-        case 'For IDS Approval': 
-          return items.filter(i => statusMatches(i.status, PrescriptionStatus.FOR_IDS_APPROVAL));
+        case 'History': 
+          // History tab logic
+          if (historyStatusFilter === 'Approved') {
+             return items.filter(i => statusMatches(i.status, PrescriptionStatus.APPROVED) && i.drug_type === DrugType.MONITORED);
+          } else if (historyStatusFilter === 'Disapproved') {
+             return items.filter(i => statusMatches(i.status, PrescriptionStatus.DISAPPROVED) && (i.drug_type === DrugType.MONITORED || (i.drug_type === DrugType.RESTRICTED && !i.ids_disapproved_at)));
+          } else if (historyStatusFilter === 'For IDS Approval') {
+             return items.filter(i => statusMatches(i.status, PrescriptionStatus.FOR_IDS_APPROVAL));
+          }
+          return [];
       }
     }
     
     if (user?.role === UserRole.IDS) {
       switch (activeTab) {
         case 'Pending': return items.filter(i => statusMatches(i.status, PrescriptionStatus.FOR_IDS_APPROVAL));
-        case 'Approved Restricted': return items.filter(i => statusMatches(i.status, PrescriptionStatus.APPROVED) && i.drug_type === DrugType.RESTRICTED);
-        case 'Disapproved Restricted': return items.filter(i => statusMatches(i.status, PrescriptionStatus.DISAPPROVED) && i.drug_type === DrugType.RESTRICTED);
+        case 'History':
+           if (historyStatusFilter === 'Approved') {
+             return items.filter(i => statusMatches(i.status, PrescriptionStatus.APPROVED) && i.drug_type === DrugType.RESTRICTED);
+           } else if (historyStatusFilter === 'Disapproved') {
+             return items.filter(i => statusMatches(i.status, PrescriptionStatus.DISAPPROVED) && i.drug_type === DrugType.RESTRICTED);
+           }
+           // IDS doesn't see 'For IDS Approval' in history, only in Pending
+           return [];
       }
     }
     
@@ -425,7 +433,7 @@ function App() {
         case 'Data Analysis': return data; 
         case 'Restricted': return items.filter(i => i.drug_type === DrugType.RESTRICTED);
         case 'Monitored': return items.filter(i => i.drug_type === DrugType.MONITORED);
-        case 'All': return items;
+        case 'Antimicrobials': return items; // Renamed from 'All'
         case 'AMS Audit': return []; 
       }
     }
@@ -440,14 +448,8 @@ function App() {
   };
   
   const FilterHeader = () => {
-    // Show filters for:
-    // 1. Pharmacist/IDS History tabs (non-Pending)
-    // 2. AMS Admin Lists (non-Analysis/Audit)
-    // 3. Resident View (Always)
-    // 4. HIDE if Data Analysis tab (since chart has own filters)
-    
     const showFilters = user?.role === UserRole.RESIDENT || 
-        (user?.role !== UserRole.AMS_ADMIN && activeTab !== 'Pending' && activeTab !== 'Data Analysis') ||
+        (user?.role !== UserRole.AMS_ADMIN && activeTab !== 'Pending' && activeTab !== 'Data Analysis' && activeTab !== 'AMS Monitoring') || 
         (user?.role === UserRole.AMS_ADMIN && (activeTab !== 'Data Analysis' && activeTab !== 'AMS Audit'));
 
     if (!showFilters) {
@@ -456,10 +458,27 @@ function App() {
 
     return (
       <div className="flex flex-col sm:flex-row gap-4 items-center justify-between mb-6 bg-white p-4 rounded-xl shadow-md border border-gray-200">
-        <h3 className="font-semibold text-gray-800 flex items-center gap-2.5">
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" /></svg>
-          Filter by Date
-        </h3>
+        <div className="flex items-center gap-4">
+            <h3 className="font-semibold text-gray-800 flex items-center gap-2.5">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" /></svg>
+            Filters
+            </h3>
+            {/* History Status Dropdown */}
+            {activeTab === 'History' && (
+                <div className="flex items-center gap-2 border-l pl-4 border-gray-200">
+                    <label className="text-xs font-semibold text-gray-500 uppercase">Status:</label>
+                    <select
+                        value={historyStatusFilter}
+                        onChange={(e) => setHistoryStatusFilter(e.target.value)}
+                        className="bg-gray-50 border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-800 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                    >
+                        <option value="Approved">Approved</option>
+                        <option value="Disapproved">Disapproved</option>
+                        {user?.role === UserRole.PHARMACIST && <option value="For IDS Approval">For IDS Approval</option>}
+                    </select>
+                </div>
+            )}
+        </div>
         <FilterControls 
           selectedMonth={selectedMonth} 
           onMonthChange={setSelectedMonth}
@@ -472,7 +491,6 @@ function App() {
 
   const renderContent = () => {
     if (dbError) {
-      // ... error handling code ...
       const isColumnMissing = dbError.includes('column') && dbError.includes('does not exist');
       return (
         <div className="p-12 bg-white rounded-lg shadow-md border-l-4 border-red-500 my-8">
@@ -511,6 +529,11 @@ function App() {
         );
     }
 
+    // New Monitoring Tab Logic
+    if (activeTab === 'AMS Monitoring') {
+        return <AMSMonitoring user={user} />;
+    }
+
     const viewData = getFilteredDataForCurrentView();
 
     if (viewData.length === 0 && !loading && activeTab !== 'Pending' && activeTab !== 'Data Analysis') {
@@ -545,16 +568,13 @@ function App() {
     }
 
     switch(activeTab) {
-      case 'Approved':
-      case 'Approved Restricted':
-        return <PrescriptionTable items={viewData} onAction={handleActionClick} onView={handleViewDetails} statusType={PrescriptionStatus.APPROVED} />;
-
-      case 'Disapproved':
-      case 'Disapproved Restricted':
-        return <PrescriptionTable items={viewData} onAction={handleActionClick} onView={handleViewDetails} statusType={PrescriptionStatus.DISAPPROVED} />;
-      
-      case 'For IDS Approval':
-        return <PrescriptionTable items={viewData} onAction={handleActionClick} onView={handleViewDetails} statusType={PrescriptionStatus.FOR_IDS_APPROVAL} />;
+      case 'History':
+        // Determine status type for table coloring logic based on the filter
+        let tableStatusType: PrescriptionStatus = PrescriptionStatus.APPROVED;
+        if (historyStatusFilter === 'Disapproved') tableStatusType = PrescriptionStatus.DISAPPROVED;
+        if (historyStatusFilter === 'For IDS Approval') tableStatusType = PrescriptionStatus.FOR_IDS_APPROVAL;
+        
+        return <PrescriptionTable items={viewData} onAction={handleActionClick} onView={handleViewDetails} statusType={tableStatusType} />;
 
       case 'Data Analysis':
         return <StatsChart 
@@ -570,14 +590,41 @@ function App() {
       
       case 'Restricted':
       case 'Monitored':
-      case 'All':
+      case 'Antimicrobials':
+         // Filter 'Antimicrobials' tab data based on drugTypeFilter
+         let displayData = viewData;
+         if (activeTab === 'Antimicrobials') {
+             if (drugTypeFilter === 'Monitored') {
+                 displayData = viewData.filter(i => i.drug_type === DrugType.MONITORED);
+             } else if (drugTypeFilter === 'Restricted') {
+                 displayData = viewData.filter(i => i.drug_type === DrugType.RESTRICTED);
+             }
+         }
+
          return (
            <div className="space-y-4">
-             <div className="flex justify-between items-center">
+             <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
                <h3 className="text-lg font-bold text-gray-700">{activeTab} Requests</h3>
-               <span className="text-sm text-gray-500 bg-gray-100 px-3 py-1 rounded-full">{viewData.length} records</span>
+               
+               <div className="flex items-center gap-3">
+                   {activeTab === 'Antimicrobials' && (
+                       <div className="flex items-center gap-2">
+                           <span className="text-xs font-semibold text-gray-500 uppercase">Drug Type:</span>
+                           <select 
+                               value={drugTypeFilter} 
+                               onChange={(e) => setDrugTypeFilter(e.target.value)} 
+                               className="bg-white border border-gray-300 rounded-lg px-3 py-1.5 text-sm text-gray-800 focus:ring-2 focus:ring-green-200 focus:border-green-500 outline-none"
+                           >
+                               <option value="All">All</option>
+                               <option value="Monitored">Monitored</option>
+                               <option value="Restricted">Restricted</option>
+                           </select>
+                       </div>
+                   )}
+                   <span className="text-sm text-gray-500 bg-gray-100 px-3 py-1 rounded-full">{displayData.length} records</span>
+               </div>
              </div>
-             <PrescriptionTable items={viewData} onAction={handleActionClick} onView={handleViewDetails} statusType={'ALL_VIEW'} />
+             <PrescriptionTable items={displayData} onAction={handleActionClick} onView={handleViewDetails} statusType={'ALL_VIEW'} />
            </div>
          );
 
@@ -649,16 +696,36 @@ function App() {
           <DisapproveModal isOpen={isDisapproveModalOpen} onClose={() => setIsDisapproveModalOpen(false)} onSubmit={handleDisapproveSubmit} loading={isSubmitting} />
           <DetailModal isOpen={!!selectedItemForView} onClose={() => setSelectedItemForView(null)} item={selectedItemForView} role={user.role} onAction={handleActionClick} />
           
-          <div className="mb-6 border-b border-gray-200 overflow-x-auto">
-            <nav className="-mb-px flex space-x-8">
-              {currentTabs.map((tab) => (
-                <button key={tab} onClick={() => setActiveTab(tab)} className={`whitespace-nowrap pb-4 px-1 border-b-2 font-medium text-sm transition-colors ${activeTab === tab ? 'border-green-600 text-green-700' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>{tab}</button>
-              ))}
-            </nav>
+          {/* Responsive Navigation Bar */}
+          <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-2 z-50 md:static md:border-t-0 md:border-b md:bg-transparent md:p-0 md:mb-6 flex overflow-x-auto gap-2 md:gap-8 justify-around md:justify-start shadow-md md:shadow-none">
+            {currentTabs.map((tab) => (
+                <button 
+                    key={tab} 
+                    onClick={() => { 
+                        setActiveTab(tab); 
+                        if(tab === 'History') setHistoryStatusFilter('Approved'); 
+                    }} 
+                    className={`whitespace-nowrap px-3 py-2 md:pb-4 md:px-1 md:pt-0 font-medium text-xs md:text-sm transition-colors rounded-md md:rounded-none md:border-b-2 flex flex-col md:block items-center
+                        ${activeTab === tab 
+                            ? 'bg-green-50 text-green-700 md:bg-transparent md:border-green-600 md:text-green-700' 
+                            : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50 md:hover:bg-transparent md:border-transparent'
+                        }`}
+                >
+                    {/* Optional Icon for Mobile (Can add specific icons per tab if needed) */}
+                    <span className="md:hidden mb-1">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                            <path d="M5 4a2 2 0 012-2h6a2 2 0 012 2v14l-5-2.5L5 18V4z" />
+                        </svg>
+                    </span>
+                    {tab}
+                </button>
+            ))}
           </div>
           
-          {FilterHeader()}
-          {renderContent()}
+          <div className="pb-20 md:pb-0"> {/* Padding for mobile bottom nav */}
+            {FilterHeader()}
+            {renderContent()}
+          </div>
         </Layout>
       )}
     </>

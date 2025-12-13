@@ -1,6 +1,6 @@
 
 import { supabase } from './supabaseClient';
-import { Prescription, PrescriptionStatus, DrugType, AMSAudit } from '../types';
+import { Prescription, PrescriptionStatus, DrugType, AMSAudit, MonitoringPatient } from '../types';
 import { GOOGLE_SHEET_WEB_APP_URL } from '../constants';
 
 /**
@@ -253,5 +253,87 @@ export const fetchAudits = async (): Promise<{ data: AMSAudit[], error: string |
     return { data: data as AMSAudit[], error: null };
   } catch (err: any) {
     return { data: [], error: err instanceof Error ? err.message : "Unknown error" };
+  }
+};
+
+// --- MONITORING FUNCTIONS ---
+
+export const fetchMonitoringPatients = async (statusFilter: string = 'Admitted'): Promise<{ data: MonitoringPatient[], error: string | null }> => {
+  try {
+    const { data, error } = await supabase
+      .from('monitoring_patients')
+      .select('*')
+      .eq('status', statusFilter)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+       if (error.code === '42P01' || error.code === 'PGRST205') { 
+         console.warn("Monitoring table does not exist yet.");
+         return { data: [], error: "Monitoring Table Missing" };
+       }
+       return { data: [], error: error.message };
+    }
+    return { data: data as MonitoringPatient[], error: null };
+  } catch (err: any) {
+    return { data: [], error: err instanceof Error ? err.message : "Unknown error" };
+  }
+};
+
+export const createMonitoringPatient = async (patient: Partial<MonitoringPatient>) => {
+  try {
+    const { data, error } = await supabase
+      .from('monitoring_patients')
+      .insert([patient])
+      .select()
+      .single();
+
+    if (error) {
+      // Fallback: If 'last_updated_by' column is missing (PGRST204), try insert without it
+      if (error.code === 'PGRST204' && patient.last_updated_by) {
+          console.warn("Column 'last_updated_by' missing in DB. Retrying insert without it.");
+          const { last_updated_by, ...safePatient } = patient;
+          const { data: retryData, error: retryError } = await supabase
+            .from('monitoring_patients')
+            .insert([safePatient])
+            .select()
+            .single();
+          
+          if (retryError) throw retryError;
+          return retryData;
+      }
+      throw error;
+    }
+    return data;
+  } catch (err: any) {
+    console.error('Create Monitoring Patient error:', JSON.stringify(err, null, 2));
+    throw new Error(err.message || "Database insert failed");
+  }
+};
+
+export const updateMonitoringPatient = async (id: number, updates: Partial<MonitoringPatient>) => {
+  try {
+    const { error } = await supabase
+      .from('monitoring_patients')
+      .update(updates)
+      .eq('id', id);
+
+    if (error) {
+      // Fallback: If 'last_updated_by' column is missing (PGRST204), try updating without it
+      if (error.code === 'PGRST204' && updates.last_updated_by) {
+          console.warn("Column 'last_updated_by' missing in DB. Retrying update without it.");
+          const { last_updated_by, ...safeUpdates } = updates;
+          const { error: retryError } = await supabase
+            .from('monitoring_patients')
+            .update(safeUpdates)
+            .eq('id', id);
+          
+          if (retryError) throw retryError;
+          return;
+      }
+      throw error;
+    }
+  } catch (err: any) {
+    console.error('Update Monitoring Patient error:', JSON.stringify(err, null, 2));
+    throw new Error(err.message || "Database update failed");
   }
 };
