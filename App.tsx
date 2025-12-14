@@ -39,7 +39,7 @@ const FilterControls = ({ selectedMonth, onMonthChange, selectedYear, onYearChan
         <select 
           value={selectedMonth} 
           onChange={(e) => onMonthChange(parseInt(e.target.value))} 
-          className="bg-white border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-800 focus:ring-2 focus:ring-green-200 focus:border-green-500 outline-none shadow-sm transition-colors hover:border-gray-400"
+          className="bg-white border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-800 focus:ring-2 focus:ring-green-200 focus:border-green-500 outline-none shadow-sm transition-colors hover:border-gray-400 [color-scheme:light]"
         >
           <option value={-1}>All Months</option>
           {months.map((m, i) => <option key={i} value={i}>{m}</option>)}
@@ -50,7 +50,7 @@ const FilterControls = ({ selectedMonth, onMonthChange, selectedYear, onYearChan
         <select 
           value={selectedYear} 
           onChange={(e) => onYearChange(parseInt(e.target.value))} 
-          className="bg-white border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-800 focus:ring-2 focus:ring-green-200 focus:border-green-500 outline-none shadow-sm transition-colors hover:border-gray-400"
+          className="bg-white border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-800 focus:ring-2 focus:ring-green-200 focus:border-green-500 outline-none shadow-sm transition-colors hover:border-gray-400 [color-scheme:light]"
         >
           <option value={0}>All Years</option>
           {years.map((y) => <option key={y} value={y}>{y}</option>)}
@@ -501,7 +501,7 @@ function App() {
                     <select
                         value={historyStatusFilter}
                         onChange={(e) => setHistoryStatusFilter(e.target.value)}
-                        className="bg-gray-50 border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-800 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                        className="bg-white border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none [color-scheme:light]"
                     >
                         <option value="Approved">Approved</option>
                         <option value="Disapproved">Disapproved</option>
@@ -685,7 +685,7 @@ function App() {
                            <select 
                                value={drugTypeFilter} 
                                onChange={(e) => setDrugTypeFilter(e.target.value)} 
-                               className="bg-white border border-gray-300 rounded-lg px-3 py-1.5 text-sm text-gray-800 focus:ring-2 focus:ring-green-200 focus:border-green-500 outline-none"
+                               className="bg-white border border-gray-300 rounded-lg px-3 py-1.5 text-sm text-gray-800 focus:ring-2 focus:ring-green-200 focus:border-green-500 outline-none [color-scheme:light]"
                            >
                                <option value="All">All</option>
                                <option value="Monitored">Monitored</option>
@@ -787,15 +787,15 @@ function App() {
           </Layout>
           
           {/* MOBILE-ONLY Navigation Bar */}
-          <div className="fixed bottom-0 left-0 right-0 bg-[#009a3e] p-1 z-40 md:hidden flex overflow-x-auto gap-1 justify-around shadow-[0_-2px_10px_rgba(0,0,0,0.1)]">
+          <div className="fixed bottom-0 left-0 right-0 bg-[#009a3e] p-2 z-40 md:hidden flex overflow-x-auto gap-2 justify-around shadow-[0_-2px_10px_rgba(0,0,0,0.1)]">
             {currentTabs.map((tab) => (
               <button 
                 key={tab} 
                 onClick={() => handleTabChange(tab)} 
-                className={`whitespace-nowrap px-2 py-1.5 font-medium text-xs transition-colors rounded-md flex flex-col items-center flex-1
+                className={`whitespace-nowrap px-2 py-1.5 font-medium text-xs transition-all duration-200 rounded-lg flex flex-col items-center flex-1
                   ${activeTab === tab 
-                    ? 'bg-white/20 text-white' 
-                    : 'text-white/70 hover:text-white hover:bg-white/10'
+                    ? 'bg-white text-[#009a3e] shadow-md' 
+                    : 'text-white/80 hover:bg-white/20 hover:text-white'
                   }`}
               >
                 <span className="mb-0.5">

@@ -123,7 +123,7 @@ const Login: React.FC<LoginProps> = ({ onLogin, onOpenManual, onOpenWorkflow, on
                 </label>
                 <div className="relative">
                   <select
-                    className="block w-full pl-3 pr-10 py-3 text-base border-gray-300 focus:outline-none focus:ring-green-500 focus:border-green-500 sm:text-sm rounded-md border bg-white text-black"
+                    className="block w-full pl-3 pr-10 py-3 text-base border-gray-300 focus:outline-none focus:ring-green-500 focus:border-green-500 sm:text-sm rounded-md border bg-white text-black [color-scheme:light]"
                     value={selectedUser}
                     onChange={(e) => setSelectedUser(e.target.value)}
                   >

@@ -319,9 +319,19 @@ export const createMonitoringPatient = async (patient: Partial<MonitoringPatient
             .single();
           
           if (retryError) throw retryError;
+          
+          // BACKUP TO GOOGLE SHEETS
+          if (retryData) {
+             await sendToGoogleSheet("Monitoring", retryData);
+          }
           return retryData;
       }
       throw error;
+    }
+    
+    // BACKUP TO GOOGLE SHEETS
+    if (data) {
+        await sendToGoogleSheet("Monitoring", data);
     }
     return data;
   } catch (err: any) {
@@ -348,10 +358,28 @@ export const updateMonitoringPatient = async (id: number, updates: Partial<Monit
             .eq('id', id);
           
           if (retryError) throw retryError;
-          return;
+      } else {
+          throw error;
       }
-      throw error;
     }
+
+    // BACKUP TO GOOGLE SHEETS
+    try {
+        const { data: updatedItem, error: fetchError } = await supabase
+          .from('monitoring_patients')
+          .select('*')
+          .eq('id', id)
+          .single();
+    
+        if (fetchError) {
+          console.error('Failed to fetch updated monitoring patient for Google Sheets backup:', fetchError);
+        } else if (updatedItem) {
+          await sendToGoogleSheet("Monitoring", updatedItem);
+        }
+    } catch (sheetError) {
+        console.error('Error in Google Sheets backup after monitoring update:', sheetError);
+    }
+
   } catch (err: any) {
     console.error('Update Monitoring Patient error:', JSON.stringify(err, null, 2));
     throw new Error(err.message || "Database update failed");

@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 
 interface DisapproveModalProps {
@@ -82,7 +83,7 @@ const DisapproveModal: React.FC<DisapproveModalProps> = ({ isOpen, onClose, onSu
             </label>
             <textarea
               id="details"
-              className={`w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 transition-colors ${reason === 'Others' ? 'border-red-400 focus:ring-red-300' : 'border-gray-300 focus:ring-green-300'}`}
+              className={`w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 transition-colors bg-white text-gray-900 ${reason === 'Others' ? 'border-red-400 focus:ring-red-300' : 'border-gray-300 focus:ring-green-300'}`}
               placeholder="Provide specific details to guide the requester..."
               rows={4}
               value={details}

@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect } from 'react';
 import { DrugType } from '../types';
 import { IDS_SPECIALISTS } from '../constants';
@@ -73,7 +74,7 @@ const NewRequestModal: React.FC<NewRequestModalProps> = ({ isOpen, onClose, onSu
   };
 
   const FormGroup = ({ label, children }: { label: string, children: React.ReactNode }) => (<div className="mb-2"><label className="block text-xs font-semibold text-gray-700 mb-1">{label}</label>{children}</div>);
-  const Input = (props: React.InputHTMLAttributes<HTMLInputElement>) => <input {...props} className="w-full border border-gray-300 rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-green-500" />;
+  const Input = (props: React.InputHTMLAttributes<HTMLInputElement>) => <input {...props} className="w-full border border-gray-300 rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-green-500 bg-white text-gray-900 [color-scheme:light]" />;
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
@@ -85,13 +86,13 @@ const NewRequestModal: React.FC<NewRequestModalProps> = ({ isOpen, onClose, onSu
             <FormGroup label="Patient Name (Last, First)"><Input required name="patient_name" value={formData.patient_name} onChange={handleChange} placeholder="e.g. Dela Cruz, Juan" /></FormGroup>
             <FormGroup label="Hospital Number"><Input required name="hospital_number" value={formData.hospital_number} onChange={handleChange} placeholder="ID Number" /></FormGroup>
             <FormGroup label="Patient Mode">
-              <select required name="mode" value={formData.mode} onChange={handleChange} className="w-full border border-gray-300 rounded px-2 py-1.5 text-sm">
+              <select required name="mode" value={formData.mode} onChange={handleChange} className="w-full border border-gray-300 rounded px-2 py-1.5 text-sm bg-white text-gray-900 [color-scheme:light]">
                 <option value="adult">Adult</option>
                 <option value="pediatric">Pediatric</option>
               </select>
             </FormGroup>
             <FormGroup label="Age"><Input name="age" value={formData.age} onChange={handleChange} placeholder="e.g. 45" /></FormGroup>
-            <FormGroup label="Sex"><select name="sex" value={formData.sex} onChange={handleChange} className="w-full border border-gray-300 rounded px-2 py-1.5 text-sm"><option value="">Select</option><option value="Male">Male</option><option value="Female">Female</option></select></FormGroup>
+            <FormGroup label="Sex"><select name="sex" value={formData.sex} onChange={handleChange} className="w-full border border-gray-300 rounded px-2 py-1.5 text-sm bg-white text-gray-900 [color-scheme:light]"><option value="">Select</option><option value="Male">Male</option><option value="Female">Female</option></select></FormGroup>
             <FormGroup label="Weight (kg)"><Input name="weight_kg" value={formData.weight_kg} onChange={handleChange} /></FormGroup>
             <FormGroup label="Height (cm)"><Input name="height_cm" value={formData.height_cm} onChange={handleChange} /></FormGroup>
             <div className="md:col-span-2"><FormGroup label="Ward / Location"><Input required name="ward" value={formData.ward} onChange={handleChange} /></FormGroup></div>
@@ -103,7 +104,7 @@ const NewRequestModal: React.FC<NewRequestModalProps> = ({ isOpen, onClose, onSu
             <h4 className="text-xs font-bold text-blue-800 uppercase mb-3">Medication</h4>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="md:col-span-2"><FormGroup label="Antimicrobial (Drug Name)"><Input required name="antimicrobial" value={formData.antimicrobial} onChange={handleChange} /></FormGroup></div>
-              <FormGroup label="Drug Type"><select name="drug_type" value={formData.drug_type} onChange={handleChange} className="w-full border border-gray-300 rounded px-2 py-1.5 text-sm"><option value={DrugType.RESTRICTED}>Restricted</option><option value={DrugType.MONITORED}>Monitored</option></select></FormGroup>
+              <FormGroup label="Drug Type"><select name="drug_type" value={formData.drug_type} onChange={handleChange} className="w-full border border-gray-300 rounded px-2 py-1.5 text-sm bg-white text-gray-900 [color-scheme:light]"><option value={DrugType.RESTRICTED}>Restricted</option><option value={DrugType.MONITORED}>Monitored</option></select></FormGroup>
               <FormGroup label="Dose"><Input name="dose" value={formData.dose} onChange={handleChange} placeholder="e.g. 1g" /></FormGroup>
               <FormGroup label="Frequency"><Input name="frequency" value={formData.frequency} onChange={handleChange} placeholder="e.g. q8h" /></FormGroup>
               <FormGroup label="Duration"><Input name="duration" value={formData.duration} onChange={handleChange} placeholder="e.g. 7 days" /></FormGroup>
@@ -122,8 +123,8 @@ const NewRequestModal: React.FC<NewRequestModalProps> = ({ isOpen, onClose, onSu
             )}
           </div>
           
-          <div className="bg-gray-50 p-3 rounded border border-gray-200"><h4 className="text-xs font-bold text-gray-500 uppercase mb-3">Microbiology & History</h4><div className="grid grid-cols-1 md:grid-cols-2 gap-4"><FormGroup label="Previous Antibiotics"><textarea name="previous_antibiotics" value={formData.previous_antibiotics} onChange={handleChange} rows={3} className="w-full border border-gray-300 rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-green-500" placeholder={'Drug: Drug 1\nFrequency: OD\nDuration: 7 days'} /></FormGroup><FormGroup label="Organisms / Specimen"><textarea name="organisms" value={formData.organisms} onChange={handleChange} rows={3} className="w-full border border-gray-300 rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-green-500" placeholder={'Name: E. coli\nSusceptibilities:\nDrug: Drug 1 Result: S'} /></FormGroup><FormGroup label="Specimen Source"><Input name="specimen" value={formData.specimen} onChange={handleChange} placeholder="e.g. Blood, Urine" /></FormGroup></div></div>
-          <div className="bg-gray-50 p-3 rounded border border-gray-200"><h4 className="text-xs font-bold text-gray-500 uppercase mb-3">Personnel</h4><div className="grid grid-cols-1 md:grid-cols-2 gap-4"><FormGroup label="Resident In-Charge"><Input name="resident_name" value={formData.resident_name} onChange={handleChange} /></FormGroup><FormGroup label="Service Resident"><Input name="service_resident_name" value={formData.service_resident_name} onChange={handleChange} /></FormGroup><FormGroup label="Clinical Dept"><Input name="clinical_dept" value={formData.clinical_dept} onChange={handleChange} /></FormGroup><FormGroup label="ID Specialist"><select name="id_specialist" value={formData.id_specialist} onChange={handleChange} className="w-full border border-gray-300 rounded px-2 py-1.5 text-sm"><option value="">Select Specialist</option>{IDS_SPECIALISTS.map(name => (<option key={name} value={name}>{name}</option>))}</select></FormGroup></div></div>
+          <div className="bg-gray-50 p-3 rounded border border-gray-200"><h4 className="text-xs font-bold text-gray-500 uppercase mb-3">Microbiology & History</h4><div className="grid grid-cols-1 md:grid-cols-2 gap-4"><FormGroup label="Previous Antibiotics"><textarea name="previous_antibiotics" value={formData.previous_antibiotics} onChange={handleChange} rows={3} className="w-full border border-gray-300 rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-green-500 bg-white text-gray-900" placeholder={'Drug: Drug 1\nFrequency: OD\nDuration: 7 days'} /></FormGroup><FormGroup label="Organisms / Specimen"><textarea name="organisms" value={formData.organisms} onChange={handleChange} rows={3} className="w-full border border-gray-300 rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-green-500 bg-white text-gray-900" placeholder={'Name: E. coli\nSusceptibilities:\nDrug: Drug 1 Result: S'} /></FormGroup><FormGroup label="Specimen Source"><Input name="specimen" value={formData.specimen} onChange={handleChange} placeholder="e.g. Blood, Urine" /></FormGroup></div></div>
+          <div className="bg-gray-50 p-3 rounded border border-gray-200"><h4 className="text-xs font-bold text-gray-500 uppercase mb-3">Personnel</h4><div className="grid grid-cols-1 md:grid-cols-2 gap-4"><FormGroup label="Resident In-Charge"><Input name="resident_name" value={formData.resident_name} onChange={handleChange} /></FormGroup><FormGroup label="Service Resident"><Input name="service_resident_name" value={formData.service_resident_name} onChange={handleChange} /></FormGroup><FormGroup label="Clinical Dept"><Input name="clinical_dept" value={formData.clinical_dept} onChange={handleChange} /></FormGroup><FormGroup label="ID Specialist"><select name="id_specialist" value={formData.id_specialist} onChange={handleChange} className="w-full border border-gray-300 rounded px-2 py-1.5 text-sm bg-white text-gray-900 [color-scheme:light]"><option value="">Select Specialist</option>{IDS_SPECIALISTS.map(name => (<option key={name} value={name}>{name}</option>))}</select></FormGroup></div></div>
           <div className="flex justify-end gap-3 pt-4 border-t border-gray-200"><button type="button" onClick={onClose} className="px-5 py-2 text-gray-600 hover:bg-gray-100 rounded text-sm font-medium" disabled={loading}>Cancel</button><button type="submit" disabled={loading} className="px-6 py-2 bg-green-600 text-white rounded hover:bg-green-700 text-sm font-medium shadow-sm flex items-center">{loading ? 'Saving...' : 'Submit Request'}</button></div>
         </form>
       </div>

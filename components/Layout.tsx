@@ -35,15 +35,15 @@ const Layout: React.FC<LayoutProps> = ({ user, onLogout, children, tabs, activeT
             </div>
           </div>
           {/* Desktop Navigation */}
-          <nav className="hidden md:flex items-center gap-6">
+          <nav className="hidden md:flex items-center gap-2">
             {tabs.map((tab) => (
               <button 
                 key={tab} 
                 onClick={() => onTabChange(tab)} 
-                className={`font-medium text-sm transition-colors py-1 ${
+                className={`px-4 py-2 rounded-full font-medium text-sm transition-all duration-200 ${
                   activeTab === tab 
-                    ? 'text-white border-b-2 border-white' 
-                    : 'text-white/70 hover:text-white'
+                    ? 'bg-white text-[#009a3e] shadow-sm' 
+                    : 'text-white/80 hover:bg-white/20 hover:text-white'
                 }`}
               >
                 {tab}

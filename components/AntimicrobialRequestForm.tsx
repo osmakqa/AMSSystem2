@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect, useMemo } from 'react';
 import { DrugType, PrescriptionStatus } from '../types'; // Removed Prescription type from imports as we use 'any' for form data or we can import it
 import { IDS_SPECIALISTS_ADULT, IDS_SPECIALISTS_PEDIATRIC, WARDS } from '../constants';
@@ -60,14 +61,14 @@ const FormGroup = ({ label, children, className = '' }: { label: string, childre
 const Input = (props: React.InputHTMLAttributes<HTMLInputElement>) => (
   <input
     {...props}
-    className={`w-full rounded-md border border-gray-300 px-2 py-1.5 text-sm outline-none focus:border-green-500 focus:ring-1 focus:ring-green-500 bg-white text-gray-900 ${props.className || ''}`}
+    className={`w-full rounded-md border border-gray-300 px-2 py-1.5 text-sm outline-none focus:border-green-500 focus:ring-1 focus:ring-green-500 bg-white text-gray-900 [color-scheme:light] ${props.className || ''}`}
   />
 );
 
 const Select = (props: React.SelectHTMLAttributes<HTMLSelectElement>) => (
   <select
     {...props}
-    className={`w-full rounded-md border border-gray-300 px-2 py-1.5 text-sm outline-none focus:border-green-500 focus:ring-1 focus:ring-green-500 bg-white text-gray-900 ${props.className || ''}`}
+    className={`w-full rounded-md border border-gray-300 px-2 py-1.5 text-sm outline-none focus:border-green-500 focus:ring-1 focus:ring-green-500 bg-white text-gray-900 [color-scheme:light] ${props.className || ''}`}
   />
 );
 

@@ -1,3 +1,4 @@
+
 import { UserRole } from './types';
 
 // Based on the provided images and requirements
@@ -48,24 +49,33 @@ export const IDS_SPECIALISTS = [
 
 export const WARDS = [
   "6th Floor Ward",
+  "7th Floor Ward",
   "ARI 2",
   "Dengue Ward",
-  "ER Holding",
-  "ER Isolation",
+  "Emergency Room Complex",
   "ICU",
   "Infectious Ward",
   "Medicine Female",
-  "Medicine Male",
   "Medicine Isolation Room",
+  "Medicine Male",
   "NICU",
+  "NICU Transition",
+  "NON-SARI",
+  "OB Gyne Ward",
+  "Pedia 3 Pulmo (Hema Ward)",
   "Pedia ICU",
-  "Pedia Ward 3",
+  "Pedia ISO (4th)",
+  "Pedia Isolation",
   "Pedia Ward 1 Stepdown",
+  "Pedia Ward 3",
+  "Pedia Ward 3 Extension",
   "Respiratory ICU",
   "SARI",
-  "Surgery Female",
-  "Surgery Male"
-];
+  "SARI 1",
+  "SARI 2",
+  "SARI 3",
+  "Surgery Ward"
+].sort();
 
 export const MONITORED_DRUGS = [
   "Imipenem", "Meropenem", "Ertapenem", "Doripenem", "Gentamicin", 

@@ -96,7 +96,7 @@ const FilterControls = ({ selectedMonth, onMonthChange, selectedYear, onYearChan
         <select 
           value={selectedMonth} 
           onChange={(e) => onMonthChange(parseInt(e.target.value))} 
-          className="bg-white border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-800 focus:ring-2 focus:ring-green-200 focus:border-green-500 outline-none shadow-sm transition-colors hover:border-gray-400"
+          className="bg-white border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-800 focus:ring-2 focus:ring-green-200 focus:border-green-500 outline-none shadow-sm transition-colors hover:border-gray-400 [color-scheme:light]"
         >
           <option value={-1}>All Months</option>
           {months.map((m, i) => <option key={i} value={i}>{m}</option>)}
@@ -107,7 +107,7 @@ const FilterControls = ({ selectedMonth, onMonthChange, selectedYear, onYearChan
         <select 
           value={selectedYear} 
           onChange={(e) => onYearChange(parseInt(e.target.value))} 
-          className="bg-white border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-800 focus:ring-2 focus:ring-green-200 focus:border-green-500 outline-none shadow-sm transition-colors hover:border-gray-400"
+          className="bg-white border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-800 focus:ring-2 focus:ring-green-200 focus:border-green-500 outline-none shadow-sm transition-colors hover:border-gray-400 [color-scheme:light]"
         >
           <option value={0}>All Years</option>
           {years.map((y) => <option key={y} value={y}>{y}</option>)}
