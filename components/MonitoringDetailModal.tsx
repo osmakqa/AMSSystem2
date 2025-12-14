@@ -227,7 +227,9 @@ const MonitoringDetailModal: React.FC<MonitoringDetailModalProps> = ({ isOpen, o
       setLoading(true);
       try {
         let newHistory = [...(patient.transfer_history || [])];
+        
         if (editingTransferIndex !== null) {
+            // Edit existing log
             newHistory[editingTransferIndex] = {
                 ...newHistory[editingTransferIndex],
                 date: new Date(transferDate).toISOString(),
@@ -235,6 +237,7 @@ const MonitoringDetailModal: React.FC<MonitoringDetailModalProps> = ({ isOpen, o
                 to_bed: transferData.to_bed,
             };
         } else {
+            // Create new transfer log
             const newLog: TransferLog = {
                 date: new Date(transferDate).toISOString(),
                 from_ward: patient.ward,
@@ -250,6 +253,7 @@ const MonitoringDetailModal: React.FC<MonitoringDetailModalProps> = ({ isOpen, o
             last_updated_by: user?.name
         };
 
+        // Update current location only if it's a NEW transfer (not editing history)
         if (editingTransferIndex === null) {
             updates.ward = transferData.to_ward;
             updates.bed_number = transferData.to_bed;
@@ -657,6 +661,17 @@ const MonitoringDetailModal: React.FC<MonitoringDetailModalProps> = ({ isOpen, o
                         <h3 className="text-sm font-bold text-gray-500 uppercase tracking-wider border-b border-gray-100 pb-3 mb-4">Patient & Clinical Details</h3>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
                             <div>
+                                <label className="text-xs font-bold text-gray-500 uppercase">Current Ward</label>
+                                <select className="w-full border rounded-lg px-3 py-2 text-sm mt-1 bg-white text-gray-900 border-gray-300 focus:ring-1 focus:ring-blue-500 [color-scheme:light]" value={formData.ward} onChange={e => setFormData({...formData, ward: e.target.value})}>
+                                    <option value="">Select Ward</option>
+                                    {WARDS.map(w => <option key={w} value={w}>{w}</option>)}
+                                </select>
+                            </div>
+                            <div>
+                                <label className="text-xs font-bold text-gray-500 uppercase">Bed Number</label>
+                                <input type="text" className="w-full border rounded-lg px-3 py-2 text-sm mt-1 bg-white text-gray-900 border-gray-300 focus:ring-1 focus:ring-blue-500" value={formData.bed_number} onChange={e => setFormData({...formData, bed_number: e.target.value})} />
+                            </div>
+                            <div>
                                 <label className="text-xs font-bold text-gray-500 uppercase">Age</label>
                                 <input type="number" className="w-full border rounded-lg px-3 py-2 text-sm mt-1 bg-white text-gray-900 border-gray-300 focus:ring-1 focus:ring-blue-500" value={formData.age} onChange={e => setFormData({...formData, age: e.target.value})} />
                             </div>
@@ -685,25 +700,28 @@ const MonitoringDetailModal: React.FC<MonitoringDetailModalProps> = ({ isOpen, o
                             <h3 className="text-sm font-bold text-gray-500 uppercase tracking-wider">Ward Transfer History</h3>
                             {!isTransferring && (
                                 <button onClick={() => initTransferForm(false)} className="text-xs font-bold text-blue-600 hover:text-blue-700 bg-blue-50 px-3 py-1.5 rounded-lg border border-blue-100">
-                                    Transfer Patient
+                                    New Transfer Log
                                 </button>
                             )}
                         </div>
                         {isTransferring && (
                             <div className="bg-blue-50 border border-blue-100 rounded-lg p-4 mb-4 animate-fade-in">
+                                <div className="flex justify-between items-center mb-3">
+                                    <h4 className="text-xs font-bold text-blue-800 uppercase">{editingTransferIndex !== null ? 'Edit Transfer Log' : 'New Transfer Log'}</h4>
+                                </div>
                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-3">
                                     <div><label className="text-xs font-bold text-gray-500">Date & Time</label><input type="datetime-local" className="w-full border rounded-lg px-2 py-2 text-sm mt-1 bg-white text-gray-900 border-gray-300 [color-scheme:light]" value={transferDate} onChange={e => setTransferDate(e.target.value)}/></div>
-                                    <div><label className="text-xs font-bold text-gray-500">New Ward</label><select className="w-full border rounded-lg px-2 py-2 text-sm mt-1 bg-white text-gray-900 border-gray-300 [color-scheme:light]" value={transferData.to_ward} onChange={e => setTransferData({...transferData, to_ward: e.target.value})}><option value="">Select</option>{WARDS.map(w => <option key={w} value={w}>{w}</option>)}</select></div>
-                                    <div><label className="text-xs font-bold text-gray-500">New Bed</label><input type="text" className="w-full border rounded-lg px-2 py-2 text-sm mt-1 bg-white text-gray-900 border-gray-300" value={transferData.to_bed} onChange={e => setTransferData({...transferData, to_bed: e.target.value})} /></div>
+                                    <div><label className="text-xs font-bold text-gray-500">To Ward</label><select className="w-full border rounded-lg px-2 py-2 text-sm mt-1 bg-white text-gray-900 border-gray-300 [color-scheme:light]" value={transferData.to_ward} onChange={e => setTransferData({...transferData, to_ward: e.target.value})}><option value="">Select</option>{WARDS.map(w => <option key={w} value={w}>{w}</option>)}</select></div>
+                                    <div><label className="text-xs font-bold text-gray-500">To Bed</label><input type="text" className="w-full border rounded-lg px-2 py-2 text-sm mt-1 bg-white text-gray-900 border-gray-300" value={transferData.to_bed} onChange={e => setTransferData({...transferData, to_bed: e.target.value})} /></div>
                                 </div>
-                                <div className="flex justify-end gap-2"><button onClick={() => setIsTransferring(false)} className="px-4 py-1.5 bg-white text-gray-600 border border-gray-300 rounded-lg text-xs font-bold hover:bg-gray-50">Cancel</button><button onClick={handleTransfer} className="px-4 py-1.5 bg-blue-600 text-white rounded-lg text-xs font-bold hover:bg-blue-700">Confirm Transfer</button></div>
+                                <div className="flex justify-end gap-2"><button onClick={() => setIsTransferring(false)} className="px-4 py-1.5 bg-white text-gray-600 border border-gray-300 rounded-lg text-xs font-bold hover:bg-gray-50">Cancel</button><button onClick={handleTransfer} className="px-4 py-1.5 bg-blue-600 text-white rounded-lg text-xs font-bold hover:bg-blue-700">{editingTransferIndex !== null ? 'Update Log' : 'Add Transfer'}</button></div>
                             </div>
                         )}
                         <div className="space-y-2">
                             {patient.transfer_history && patient.transfer_history.length > 0 ? patient.transfer_history.map((log, idx) => (
                                 <div key={idx} className="flex items-center justify-between text-sm bg-gray-50 p-3 rounded-lg border border-gray-200 group">
                                     <div><span className="font-semibold text-gray-800">{log.from_ward} ({log.from_bed})</span> <span className="text-gray-400 mx-1">→</span> <span className="font-semibold text-gray-800">{log.to_ward} ({log.to_bed})</span></div>
-                                    <div className="flex items-center gap-2"><span className="text-xs text-gray-500">{new Date(log.date).toLocaleString()}</span><button onClick={() => initTransferForm(true, log, idx)} className="text-blue-500 opacity-0 group-hover:opacity-100"><svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg></button></div>
+                                    <div className="flex items-center gap-2"><span className="text-xs text-gray-500">{new Date(log.date).toLocaleString()}</span><button onClick={() => initTransferForm(true, log, idx)} className="text-blue-500 opacity-0 group-hover:opacity-100 hover:text-blue-700"><svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg></button></div>
                                 </div>
                             )) : <p className="text-sm text-gray-400 italic">No transfer history.</p>}
                         </div>
@@ -1166,7 +1184,7 @@ const MonitoringDetailModal: React.FC<MonitoringDetailModalProps> = ({ isOpen, o
         <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-[150] p-4 backdrop-blur-sm">
             <div className="bg-white text-gray-900 rounded-xl shadow-2xl p-6 max-w-sm w-full animate-fade-in border border-gray-200">
                 <h3 className="text-lg font-bold text-gray-800 mb-4 border-b border-gray-200 pb-2 flex items-center gap-2">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-indigo-600" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z" clipRule="evenodd" /></svg>
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-indigo-600" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 1111.314 0z" clipRule="evenodd" /></svg>
                     Add Sensitivity Data
                 </h3>
                 
