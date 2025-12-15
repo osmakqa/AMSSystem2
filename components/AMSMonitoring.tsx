@@ -48,12 +48,36 @@ const MISSED_REASONS = ["Stock Out", "Patient Refused", "NPO", "IV Access Issue"
 
 // --- SVG ICONS for HUD & Red Flags ---
 const KpiIcon = ({ path }: { path: string }) => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">{path}</svg>;
+const RedFlagIcon = ({ path, color, title }: { path: string; color: string; title: string }) => (
+  <div className={`p-1 rounded-full ${color}`} title={title}>
+    <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      {path}
+    </svg>
+  </div>
+);
+
+const LegendFlagIcon = ({ path, color, title }: { path: string; color: string; title: string }) => (
+    <div className={`p-0.5 rounded-full ${color}`} title={title}>
+      <svg xmlns="http://www.w3.org/2000/svg" className="h-2.5 w-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+        {path}
+      </svg>
+    </div>
+);
 
 // --- Action Icons for Disposition Column ---
 const TransferIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" /></svg>;
 const DischargeIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" /></svg>;
 const ExpiredIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7a4 4 0 11-8 0 4 4 0 018 0zM9 14a6 6 0 00-6 6v1h12v-1a6 6 0 00-6-6zM21 12h-6" /></svg>;
 const ReAdmitIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>;
+
+const LegendActionIcon = ({ icon, color, label }: { icon: React.ReactNode, color: string, label: string }) => (
+    <div className="flex items-center gap-1.5">
+        <div className={`p-1.5 rounded-lg border-2 shadow-sm ${color} bg-white`}>
+            {icon}
+        </div>
+        <span className="text-[10px] font-bold text-gray-600">{label}</span>
+    </div>
+);
 
 const KpiCard = ({ title, value, subValue, icon, iconColor, isActive, onClick }: { title: string, value: string | number, subValue?: string, icon: React.ReactNode, iconColor: string, isActive: boolean, onClick?: () => void }) => (
     <div 
@@ -1221,7 +1245,7 @@ const AMSMonitoring: React.FC<AMSMonitoringProps> = ({ user }) => {
                 value={kpiStats.newCount} 
                 iconColor={kpiFilter === 'New' ? "bg-green-600 text-white" : "bg-green-100 text-green-700"}
                 isActive={kpiFilter === 'New'}
-                icon={<KpiIcon path="M10 3a1 1 0 011 1v5h5a1 1 0 11-2 0v-5H4a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" />} 
+                icon={<KpiIcon path="M10 3a1 1 0 011 1v5h5a1 1 0 11-2 0v-5H4a1 1 0 11-2 0v-5H4a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" />} 
                 onClick={() => setKpiFilter(kpiFilter === 'New' ? 'All' : 'New')}
             />
             
@@ -1309,365 +1333,383 @@ const AMSMonitoring: React.FC<AMSMonitoringProps> = ({ user }) => {
                                     Date {getSortIcon(statusFilter === 'Admitted' ? 'date_of_admission' : 'discharged_at')}
                                 </th>
                                 <th onClick={() => requestSort('days_on_therapy')} className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none">
-                                    Max Days {getSortIcon('days_on_therapy')}
+                                    Days on Therapy {getSortIcon('days_on_therapy')}
                                 </th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                    Active Antimicrobials
-                                </th>
-                                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                    Disposition / Actions
-                                </th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider text-center">Red Flags</th>
+                                <th className="px-2 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-32">Disposition</th>
                             </tr>
                         </thead>
                         <tbody className="bg-white divide-y divide-gray-200">
-                            {sortedPatients.map((patient) => {
-                                const isExpanded = expandedRowId === patient.id;
-                                const activeDrugNames = patient.antimicrobials
-                                    .filter(d => d.status === 'Active')
-                                    .map(d => d.drug_name);
-                                const maxDays = getMaxTherapyDays(patient);
-                                const redFlags = getRedFlagStatus(patient);
-                                
+                            {sortedPatients.map(p => {
+                                const { hasMissedDoses, hasRenalAlert, hasProlongedTherapy } = getRedFlagStatus(p);
+                                const dateToShow = statusFilter === 'Admitted' ? p.date_of_admission : p.discharged_at;
+                                const dateLabel = statusFilter === 'Admitted' ? 'Admitted' : statusFilter;
+                                const statusColor = p.status === 'Admitted' ? 'bg-blue-500' : p.status === 'Discharged' ? 'bg-gray-500' : 'bg-red-500';
+
                                 return (
-                                    <React.Fragment key={patient.id}>
-                                        <tr className={`hover:bg-gray-50 transition-colors ${isExpanded ? 'bg-blue-50/30' : ''}`}>
-                                            <td className="px-6 py-4 whitespace-nowrap">
-                                                <div className="flex items-center cursor-pointer" onClick={() => setSelectedPatient(patient)}>
-                                                    <div>
-                                                        <div className="text-sm font-bold text-gray-900 flex items-center gap-2">
-                                                            {patient.patient_name}
-                                                            {(redFlags.hasMissedDoses || redFlags.hasRenalAlert || redFlags.hasProlongedTherapy) && (
-                                                                <span className="flex h-2 w-2 relative">
-                                                                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                                                                    <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
-                                                                </span>
-                                                            )}
-                                                        </div>
-                                                        <div className="text-xs text-gray-500 font-mono">{patient.hospital_number}</div>
-                                                    </div>
-                                                </div>
-                                            </td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                                <div className="flex flex-col">
-                                                    <span className="font-semibold text-gray-700">{patient.ward}</span>
-                                                    <span className="text-xs">Bed {patient.bed_number}</span>
-                                                </div>
-                                            </td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                                {statusFilter === 'Admitted' 
-                                                    ? new Date(patient.date_of_admission).toLocaleDateString()
-                                                    : patient.discharged_at ? new Date(patient.discharged_at).toLocaleDateString() : '-'
-                                                }
-                                            </td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                                <span className={`font-bold ${maxDays > 7 ? 'text-orange-600' : 'text-gray-700'}`}>
-                                                    {maxDays > 0 ? `Day ${maxDays}` : '-'}
-                                                </span>
-                                            </td>
-                                            <td className="px-6 py-4 text-sm text-gray-500">
-                                                <div className="flex flex-wrap gap-1 max-w-xs">
-                                                    {activeDrugNames.length > 0 ? activeDrugNames.map((d, i) => (
-                                                        <span key={i} className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
-                                                            {d}
-                                                        </span>
-                                                    )) : <span className="text-gray-400 italic text-xs">None active</span>}
-                                                </div>
-                                            </td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                                <div className="flex items-center justify-end gap-2">
-                                                    <button onClick={() => handleRowToggle(patient.id)} className={`p-1.5 rounded-full hover:bg-gray-100 transition-colors ${isExpanded ? 'text-blue-600 bg-blue-50' : 'text-gray-400'}`} title="Log Administration">
-                                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" /></svg>
-                                                    </button>
-                                                    <button onClick={() => setSelectedPatient(patient)} className="p-1.5 rounded-full hover:bg-gray-100 text-gray-400 hover:text-blue-600 transition-colors" title="View Details">
-                                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
-                                                    </button>
-                                                    
-                                                    {statusFilter === 'Admitted' ? (
-                                                        <>
-                                                            <button onClick={() => setTransferAction({ patient })} className="p-1.5 rounded-full hover:bg-gray-100 text-gray-400 hover:text-orange-600 transition-colors" title="Transfer">
-                                                                <TransferIcon />
-                                                            </button>
-                                                            <button onClick={() => setDispositionAction({ patient, action: 'Discharge' })} className="p-1.5 rounded-full hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors" title="Discharge">
-                                                                <DischargeIcon />
-                                                            </button>
-                                                            <button onClick={() => setDispositionAction({ patient, action: 'Expire' })} className="p-1.5 rounded-full hover:bg-gray-100 text-gray-400 hover:text-red-600 transition-colors" title="Mark Expired">
-                                                                <ExpiredIcon />
-                                                            </button>
-                                                        </>
-                                                    ) : (
-                                                        <button onClick={() => setDispositionAction({ patient, action: 'Re-admit' })} className="p-1.5 rounded-full hover:bg-gray-100 text-gray-400 hover:text-green-600 transition-colors" title="Re-admit">
-                                                            <ReAdmitIcon />
+                                <React.Fragment key={p.id}>
+                                    <tr onClick={() => handleRowToggle(p.id)} className="hover:bg-gray-50 cursor-pointer transition-colors">
+                                        <td className="px-6 py-4 whitespace-nowrap"><div className="flex items-center gap-3"><span className={`w-2.5 h-2.5 rounded-full ${statusColor}`}></span><div><div className="font-medium text-gray-900">{p.patient_name}</div><div className="text-xs text-gray-500">{p.hospital_number}</div></div></div></td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{p.ward}</td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500"><span className="text-xs text-gray-400">{dateLabel}: </span>{dateToShow ? new Date(dateToShow).toLocaleDateString() : 'N/A'}</td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                            {p.antimicrobials.filter(d => d.status === 'Active').length > 0 ? (
+                                                <ul className="space-y-2">
+                                                    {p.antimicrobials.filter(d => d.status === 'Active').map(drug => {
+// @ts-ignore
+                                                        const totalDosesGiven = Object.values(drug.administration_log || {}).flat().filter((entry: string | AdminLogEntry) => normalizeLogEntry(entry).status === 'Given').length;
+                                                        const dosesPerDay = drug.frequency_hours ? Math.max(1, Math.floor(24 / drug.frequency_hours)) : 1;
+                                                        const totalPlannedDoses = Number(drug.planned_duration || 0) * dosesPerDay;
+                                                        const progressPercent = totalPlannedDoses > 0 ? Math.min((totalDosesGiven / totalPlannedDoses) * 100, 100) : 0;
+                                                        return(
+                                                        <li key={drug.id} className="text-xs w-48"><div className="flex justify-between font-semibold"><span className="text-gray-700">{drug.drug_name}</span><span className="text-blue-600">{calculateDoseBasedDuration(drug)}</span></div><div className="w-full bg-gray-200 rounded-full h-1 mt-1"><div className="bg-blue-600 h-1 rounded-full" style={{ width: `${progressPercent}%` }}></div></div></li>
+                                                    )})}
+                                                </ul>
+                                            ) : 'None'}
+                                        </td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-center">
+                                          <div className="flex items-center gap-2">
+                                            {hasRenalAlert && <RedFlagIcon path="M13 10V3L4 14h7v7l9-11h-7z" color="bg-orange-500" title={`Renal Alert: eGFR is ${p.egfr}`} />}
+                                            {hasMissedDoses && <RedFlagIcon path="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" color="bg-red-500" title="Patient has missed doses." />}
+                                            {hasProlongedTherapy && <RedFlagIcon path="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9-2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9-2-2-.9-2-2-2z" color="bg-purple-500" title="Therapy > 14 days." />}
+                                            {!hasMissedDoses && !hasRenalAlert && !hasProlongedTherapy && <span className="text-gray-300 mx-auto">-</span>}
+                                          </div>
+                                        </td>
+                                        <td className="px-2 py-4 whitespace-nowrap text-center text-sm w-32">
+                                            <div className="flex justify-center gap-1.5" onClick={(e) => e.stopPropagation()}>
+                                                {p.status === 'Admitted' ? (
+                                                    <>
+                                                        <button 
+                                                            onClick={(e) => { e.stopPropagation(); setTransferInputs({ to_ward: '', to_bed: '', date: toLocalISO() }); setTransferAction({ patient: p }); }} 
+                                                            className="p-1.5 rounded-lg border-2 shadow-sm bg-indigo-50 border-indigo-200 text-indigo-600 hover:bg-indigo-100 hover:border-indigo-300 transition-colors hover:shadow-md active:scale-95"
+                                                            title="Transfer"
+                                                        >
+                                                            <TransferIcon />
                                                         </button>
-                                                    )}
-                                                </div>
+                                                        <button 
+                                                            onClick={(e) => { e.stopPropagation(); setDispositionAction({ patient: p, action: 'Discharge' }) }} 
+                                                            className="p-1.5 rounded-lg border-2 shadow-sm bg-emerald-50 border-emerald-200 text-emerald-600 hover:bg-emerald-100 hover:border-emerald-300 transition-colors hover:shadow-md active:scale-95"
+                                                            title="Discharge"
+                                                        >
+                                                            <DischargeIcon />
+                                                        </button>
+                                                        <button 
+                                                            onClick={(e) => { e.stopPropagation(); setDispositionAction({ patient: p, action: 'Expire' }) }} 
+                                                            className="p-1.5 rounded-lg border-2 shadow-sm bg-slate-100 border-slate-200 text-slate-600 hover:bg-slate-200 hover:border-slate-300 transition-colors hover:shadow-md active:scale-95"
+                                                            title="Expired"
+                                                        >
+                                                            <ExpiredIcon />
+                                                        </button>
+                                                    </>
+                                                ) : (
+                                                    <button 
+                                                        onClick={(e) => { e.stopPropagation(); setDispositionAction({ patient: p, action: 'Re-admit' }) }} 
+                                                        className="p-1.5 rounded-lg border-2 shadow-sm bg-blue-50 border-blue-200 text-blue-600 hover:bg-blue-100 hover:border-blue-300 transition-colors hover:shadow-md active:scale-95"
+                                                        title="Re-admit"
+                                                    >
+                                                        <ReAdmitIcon />
+                                                    </button>
+                                                )}
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    {expandedRowId === p.id && (
+                                        <tr>
+                                            <td colSpan={7} className="p-0">
+                                                <ExpansionRow
+                                                    patient={p}
+// @ts-ignore
+                                                    onAddLog={updatePatientLog}
+                                                    onViewFullSheet={() => setSelectedPatient(p)}
+                                                    onStatusAction={(drugId, action) => initiateStatusChange(drugId, p.id, action)}
+                                                    onSensitivityAction={(drug) => openSensitivityModal(drug, p.id)}
+                                                    onEditDrug={(drug) => setDrugToEdit({ patientId: p.id, drug })}
+                                                />
                                             </td>
                                         </tr>
-                                        {isExpanded && (
-                                            <tr>
-                                                <td colSpan={6} className="p-0 border-b border-gray-200">
-                                                    <ExpansionRow 
-                                                        patient={patient} 
-                                                        onAddLog={updatePatientLog}
-                                                        onViewFullSheet={() => setSelectedPatient(patient)}
-                                                        onStatusAction={(drugId, action) => initiateStatusChange(drugId, patient.id, action)}
-                                                        onSensitivityAction={(drug) => openSensitivityModal(drug, patient.id)}
-                                                        onEditDrug={(drug) => setDrugToEdit({ patientId: patient.id, drug })}
-                                                    />
-                                                </td>
-                                            </tr>
-                                        )}
-                                    </React.Fragment>
-                                );
-                            })}
+                                    )}
+                                </React.Fragment>
+                            )})}
                         </tbody>
                     </table>
                 </div>
+                {filteredPatients.length === 0 && <div className="text-center py-16 text-gray-400">No patients found.</div>}
             </div>
+
+            {currentView === 'Patient List' && (
+                <div className="mt-4 border-t border-gray-100 pt-4 flex flex-col sm:flex-row gap-6">
+                    <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+                        <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">Red Flags:</span>
+                        <div className="flex items-center gap-1">
+                            <LegendFlagIcon path="M13 10V3L4 14h7v7l9-11h-7z" color="bg-orange-500" title="Renal Alert" />
+                            <span className="text-[9px] text-gray-500">Renal Alert</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                            <LegendFlagIcon path="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" color="bg-red-500" title="Missed Doses" />
+                            <span className="text-[9px] text-gray-500">Missed Doses</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                            <LegendFlagIcon path="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9-2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9-2-2-.9-2-2-2z" color="bg-purple-500" title="Prolonged Therapy" />
+                            <span className="text-[9px] text-gray-500">Therapy &gt; 14 Days</span>
+                        </div>
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-3">
+                        <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">Actions:</span>
+                        <LegendActionIcon icon={<TransferIcon />} color="bg-indigo-50 border-indigo-200 text-indigo-600" label="Transfer" />
+                        <LegendActionIcon icon={<DischargeIcon />} color="bg-emerald-50 border-emerald-200 text-emerald-600" label="Discharge" />
+                        <LegendActionIcon icon={<ExpiredIcon />} color="bg-slate-100 border-slate-200 text-slate-600" label="Expired" />
+                        <LegendActionIcon icon={<ReAdmitIcon />} color="bg-blue-50 border-blue-200 text-blue-600" label="Re-admit" />
+                    </div>
+                </div>
+            )}
             </>
         )}
 
         {/* Modals */}
-        {selectedPatient && (
-            <MonitoringDetailModal 
-                isOpen={!!selectedPatient} 
-                onClose={() => setSelectedPatient(null)} 
-                patient={selectedPatient} 
-                user={user} 
-                onUpdate={loadData}
-                onOpenAdminModal={handleOpenAdminModal}
-            />
-        )}
-
-        {/* Add Patient Modal */}
+        {/* ... Rest of modals code unchanged ... */}
+        <MonitoringDetailModal isOpen={!!selectedPatient} onClose={() => setSelectedPatient(null)} patient={selectedPatient} user={user} onUpdate={loadData} onOpenAdminModal={handleOpenAdminModal} />
+        
+        {/* ... Add Patient, Admin Log, Disposition, Transfer Modals Same as Before ... */}
         {isAddModalOpen && (
-            <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-[120] p-4 backdrop-blur-sm">
-                <div className="bg-white rounded-xl shadow-2xl p-6 w-full max-w-lg animate-fade-in border border-gray-200">
-                    <h3 className="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" /></svg>
-                        Add New Patient
-                    </h3>
-                    <div className="grid grid-cols-2 gap-4">
-                        <div className="col-span-2">
-                            <label className="text-xs font-bold text-gray-500 uppercase">Patient Name</label>
-                            <input className="w-full border rounded-lg px-3 py-2 text-sm mt-1 focus:ring-2 focus:ring-blue-500 outline-none" value={newPatient.patient_name} onChange={e => setNewPatient({...newPatient, patient_name: e.target.value})} placeholder="Last Name, First Name" />
-                        </div>
-                        <div>
-                            <label className="text-xs font-bold text-gray-500 uppercase">Hospital No.</label>
-                            <input className="w-full border rounded-lg px-3 py-2 text-sm mt-1" value={newPatient.hospital_number} onChange={e => setNewPatient({...newPatient, hospital_number: e.target.value})} placeholder="ID Number" />
-                        </div>
-                        <div>
-                            <label className="text-xs font-bold text-gray-500 uppercase">Ward</label>
-                            <select className="w-full border rounded-lg px-3 py-2 text-sm mt-1 bg-white [color-scheme:light]" value={newPatient.ward} onChange={e => setNewPatient({...newPatient, ward: e.target.value})}>
-                                <option value="">Select Ward</option>
-                                {WARDS.map(w => <option key={w} value={w}>{w}</option>)}
-                            </select>
-                        </div>
-                        <div>
-                            <label className="text-xs font-bold text-gray-500 uppercase">Bed No.</label>
-                            <input className="w-full border rounded-lg px-3 py-2 text-sm mt-1" value={newPatient.bed_number} onChange={e => setNewPatient({...newPatient, bed_number: e.target.value})} />
-                        </div>
-                        <div>
-                            <label className="text-xs font-bold text-gray-500 uppercase">Admission Date</label>
-                            <input type="date" className="w-full border rounded-lg px-3 py-2 text-sm mt-1 [color-scheme:light]" value={newPatient.date_of_admission} onChange={e => setNewPatient({...newPatient, date_of_admission: e.target.value})} />
-                        </div>
-                        <div>
-                            <label className="text-xs font-bold text-gray-500 uppercase">Age</label>
-                            <input className="w-full border rounded-lg px-3 py-2 text-sm mt-1" value={newPatient.age} onChange={e => setNewPatient({...newPatient, age: e.target.value})} />
-                        </div>
-                        <div>
-                            <label className="text-xs font-bold text-gray-500 uppercase">Sex</label>
-                            <select className="w-full border rounded-lg px-3 py-2 text-sm mt-1 bg-white [color-scheme:light]" value={newPatient.sex} onChange={e => setNewPatient({...newPatient, sex: e.target.value})}>
-                                <option value="">Select</option><option value="Male">Male</option><option value="Female">Female</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label className="text-xs font-bold text-gray-500 uppercase">SCr (µmol/L)</label>
-                            <input className="w-full border rounded-lg px-3 py-2 text-sm mt-1" value={newPatient.latest_creatinine} onChange={e => setNewPatient({...newPatient, latest_creatinine: e.target.value})} />
-                        </div>
-                        <div className="col-span-2">
-                            <label className="text-xs font-bold text-gray-500 uppercase">Infectious Diagnosis</label>
-                            <input className="w-full border rounded-lg px-3 py-2 text-sm mt-1" value={newPatient.infectious_diagnosis} onChange={e => setNewPatient({...newPatient, infectious_diagnosis: e.target.value})} />
-                        </div>
+            <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-[150] p-4 backdrop-blur-sm">
+                <div className="bg-white text-gray-900 rounded-xl shadow-2xl p-6 max-w-2xl w-full">
+                    <h3 className="text-lg font-bold text-gray-800 mb-4">Add New Patient to Monitoring</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                        <div className="md:col-span-2"><label className="text-xs font-bold text-gray-500 uppercase">Patient Name</label><input className="w-full border rounded-lg px-3 py-2 mt-1 bg-white text-gray-900 border-gray-300" value={newPatient.patient_name} onChange={e => setNewPatient({...newPatient, patient_name: e.target.value})} /></div>
+                        <div><label className="text-xs font-bold text-gray-500 uppercase">Hospital No.</label><input className="w-full border rounded-lg px-3 py-2 mt-1 bg-white text-gray-900 border-gray-300" value={newPatient.hospital_number} onChange={e => setNewPatient({...newPatient, hospital_number: e.target.value})} /></div>
+                        <div><label className="text-xs font-bold text-gray-500 uppercase">Admission Date</label><input type="date" className="w-full border rounded-lg px-3 py-2 mt-1 bg-white text-gray-900 border-gray-300 [color-scheme:light]" value={newPatient.date_of_admission} onChange={e => setNewPatient({...newPatient, date_of_admission: e.target.value})} /></div>
+                        <div><label className="text-xs font-bold text-gray-500 uppercase">Ward</label><select className="w-full border rounded-lg px-3 py-2 mt-1 bg-white text-gray-900 border-gray-300 [color-scheme:light]" value={newPatient.ward} onChange={e => setNewPatient({...newPatient, ward: e.target.value})}><option value="">Select</option>{WARDS.map(w => <option key={w} value={w}>{w}</option>)}</select></div>
+                        <div><label className="text-xs font-bold text-gray-500 uppercase">Bed No.</label><input className="w-full border rounded-lg px-3 py-2 mt-1 bg-white text-gray-900 border-gray-300" value={newPatient.bed_number} onChange={e => setNewPatient({...newPatient, bed_number: e.target.value})} /></div>
+                        <div><label className="text-xs font-bold text-gray-500 uppercase">Age</label><input type="number" className="w-full border rounded-lg px-3 py-2 mt-1 bg-white text-gray-900 border-gray-300" value={newPatient.age} onChange={e => setNewPatient({...newPatient, age: e.target.value})} /></div>
+                        <div><label className="text-xs font-bold text-gray-500 uppercase">Sex</label><select className="w-full border rounded-lg px-3 py-2 mt-1 bg-white text-gray-900 border-gray-300 [color-scheme:light]" value={newPatient.sex} onChange={e => setNewPatient({...newPatient, sex: e.target.value})}><option value="">Select</option><option value="Male">Male</option><option value="Female">Female</option></select></div>
+                        <div><label className="text-xs font-bold text-gray-500 uppercase">SCr (µmol/L)</label><input type="number" className="w-full border rounded-lg px-3 py-2 mt-1 bg-white text-gray-900 border-gray-300" value={newPatient.latest_creatinine} onChange={e => setNewPatient({...newPatient, latest_creatinine: e.target.value})} /></div>
+                        <div><label className="text-xs font-bold text-gray-500 uppercase">On Dialysis?</label><select className="w-full border rounded-lg px-3 py-2 mt-1 bg-white text-gray-900 border-gray-300 [color-scheme:light]" value={newPatient.dialysis_status} onChange={e => setNewPatient({...newPatient, dialysis_status: e.target.value as 'Yes' | 'No'})}><option value="No">No</option><option value="Yes">Yes</option></select></div>
+                        <div className="md:col-span-2"><label className="text-xs font-bold text-gray-500 uppercase">Infectious Diagnosis</label><textarea className="w-full border rounded-lg px-3 py-2 mt-1 bg-white text-gray-900 border-gray-300" rows={2} value={newPatient.infectious_diagnosis} onChange={e => setNewPatient({...newPatient, infectious_diagnosis: e.target.value})} /></div>
                     </div>
-                    <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-gray-100">
-                        <button onClick={() => setIsAddModalOpen(false)} className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg text-sm font-bold bg-white border border-gray-300">Cancel</button>
-                        <button onClick={handleAddPatient} disabled={loading} className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-bold shadow-sm hover:bg-blue-700 transition-colors">Add Patient</button>
+                    <div className="flex justify-end gap-2 mt-6">
+                        <button onClick={() => setIsAddModalOpen(false)} className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg text-sm font-medium bg-white border border-gray-300">Cancel</button>
+                        <button onClick={handleAddPatient} disabled={loading} className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-bold shadow-sm hover:bg-blue-700">Save Patient</button>
                     </div>
                 </div>
             </div>
         )}
-
-        {/* ... Other modals (AdminLog, Status Change, etc.) reused or lifted ... */}
-        {/* Reusing AdminLogModal logic but inline or via existing state */}
+        
         {adminModal && adminModal.isOpen && (
-            <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-[130] p-4 backdrop-blur-sm">
-                <div className="bg-white rounded-xl shadow-2xl p-6 w-full max-w-sm animate-fade-in border border-gray-200">
-                    <h3 className="text-lg font-bold text-gray-800 mb-4">Log Administration</h3>
-                    {/* ... form content same as GridLogModal but adapted for main state ... */}
+            <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-[150] p-4 backdrop-blur-sm">
+                <div className="bg-white text-gray-900 rounded-xl shadow-2xl p-6 max-w-md w-full">
+                    <h3 className="text-lg font-bold text-gray-800 mb-2">Log Administration</h3>
+                    <p className="text-sm text-gray-500 mb-4">For date: <span className="font-semibold">{new Date(adminModal.dateStr).toLocaleDateString()}</span></p>
+        
                     <div className="space-y-4">
                         <div className="flex bg-gray-100 p-1 rounded-lg border border-gray-200">
-                            <button onClick={() => setAdminStatus('Given')} className={`flex-1 py-2 text-sm font-bold rounded-md transition-all ${adminStatus === 'Given' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-500'}`}>Given</button>
-                            <button onClick={() => setAdminStatus('Missed')} className={`flex-1 py-2 text-sm font-bold rounded-md transition-all ${adminStatus === 'Missed' ? 'bg-white text-red-600 shadow-sm' : 'text-gray-500'}`}>Missed</button>
+                            <button onClick={() => setAdminStatus('Given')} className={`flex-1 py-2 text-sm font-medium rounded-md ${adminStatus === 'Given' ? 'bg-white shadow-sm text-blue-600 font-bold border border-gray-200' : 'text-gray-500 hover:text-gray-700'}`}>Given</button>
+                            <button onClick={() => setAdminStatus('Missed')} className={`flex-1 py-2 text-sm font-medium rounded-md ${adminStatus === 'Missed' ? 'bg-white shadow-sm text-red-600 font-bold border border-gray-200' : 'text-gray-500 hover:text-gray-700'}`}>Missed</button>
                         </div>
                         {adminStatus === 'Given' ? (
                             <div>
-                                <label className="text-xs font-bold text-gray-500 uppercase block mb-1">Time</label>
-                                <input type="time" className="w-full border rounded-lg px-3 py-2 text-lg" value={adminTime} onChange={e => setAdminTime(e.target.value)} autoFocus />
+                                <label className="text-xs font-bold text-gray-500 uppercase">Time Given</label>
+                                <input type="time" className="w-full border rounded-lg px-3 py-2 mt-1 bg-white text-gray-900 border-gray-300 [color-scheme:light]" value={adminTime} onChange={e => setAdminTime(e.target.value)} />
                             </div>
                         ) : (
                             <div>
-                                <label className="text-xs font-bold text-gray-500 uppercase block mb-1">Reason</label>
-                                <select className="w-full border rounded-lg px-3 py-2 text-sm mb-2" value={adminMissReason} onChange={e => setAdminMissReason(e.target.value)}>
-                                    <option value="">Select...</option>
+                                <label className="text-xs font-bold text-gray-500 uppercase">Reason for Missed Dose</label>
+                                <select className="w-full border rounded-lg px-3 py-2 mt-1 bg-white text-gray-900 border-gray-300 [color-scheme:light]" value={adminMissReason} onChange={e => setAdminMissReason(e.target.value)}>
+                                    <option value="">Select Reason</option>
                                     {MISSED_REASONS.map(r => <option key={r} value={r}>{r}</option>)}
                                 </select>
-                                {adminMissReason === 'Others (Specify)' && <input className="w-full border rounded-lg px-3 py-2 text-sm" placeholder="Specify..." value={adminMissReasonOther} onChange={e => setAdminMissReasonOther(e.target.value)} />}
+                                {adminMissReason === 'Others (Specify)' && (
+                                    <input type="text" placeholder="Specify other reason..." className="w-full border rounded-lg px-3 py-2 mt-2 bg-white text-gray-900 border-gray-300" value={adminMissReasonOther} onChange={e => setAdminMissReasonOther(e.target.value)} />
+                                )}
                             </div>
                         )}
                     </div>
+        
                     <div className="flex justify-end gap-2 mt-6">
-                        <button onClick={() => { setAdminModal(null); resetAdminModalState(); }} className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg text-sm font-bold border border-gray-300">Cancel</button>
-                        <button onClick={handleAdminLogSave} className={`px-4 py-2 text-white rounded-lg text-sm font-bold shadow-sm ${adminStatus === 'Given' ? 'bg-blue-600 hover:bg-blue-700' : 'bg-red-600 hover:bg-red-700'}`}>Save Log</button>
+                        <button onClick={() => { setAdminModal(null); resetAdminModalState(); }} className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg text-sm font-medium bg-white border border-gray-300">Cancel</button>
+                        <button onClick={handleAdminLogSave} disabled={loading} className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-bold shadow-sm hover:bg-blue-700">Save Log</button>
                     </div>
                 </div>
             </div>
         )}
-
-        {/* Transfer / Discharge Modals Reuse or implementation ... */}
+        
         {dispositionAction && (
-            <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-[130] p-4 backdrop-blur-sm">
-                <div className="bg-white rounded-xl shadow-2xl p-6 max-w-sm w-full border-t-4 border-gray-500">
-                    <h3 className="text-lg font-bold text-gray-900 mb-2">Confirm {dispositionAction.action}</h3>
-                    <p className="text-sm text-gray-600 mb-4">
-                        Are you sure you want to {dispositionAction.action.toLowerCase()} <strong>{dispositionAction.patient.patient_name}</strong>?
-                    </p>
-                    <div className="flex justify-end gap-3">
-                        <button onClick={() => setDispositionAction(null)} className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg text-sm font-medium">Cancel</button>
-                        <button onClick={confirmDisposition} disabled={loading} className="px-4 py-2 bg-gray-800 text-white rounded-lg text-sm font-bold hover:bg-gray-900">Yes, Confirm</button>
-                    </div>
-                </div>
-            </div>
-        )}
-
-        {transferAction && (
-            <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-[130] p-4 backdrop-blur-sm">
-                <div className="bg-white rounded-xl shadow-2xl p-6 max-w-sm w-full animate-fade-in border border-blue-200">
-                    <h3 className="text-lg font-bold text-blue-800 mb-4">Transfer Patient</h3>
-                    <div className="space-y-3">
-                        <div>
-                            <label className="text-xs font-bold text-gray-500 uppercase block mb-1">Date & Time</label>
-                            <input type="datetime-local" className="w-full border rounded-lg px-3 py-2 text-sm [color-scheme:light]" value={transferInputs.date} onChange={e => setTransferInputs({...transferInputs, date: e.target.value})} />
-                        </div>
-                        <div>
-                            <label className="text-xs font-bold text-gray-500 uppercase block mb-1">To Ward</label>
-                            <select className="w-full border rounded-lg px-3 py-2 text-sm bg-white [color-scheme:light]" value={transferInputs.to_ward} onChange={e => setTransferInputs({...transferInputs, to_ward: e.target.value})}>
-                                <option value="">Select Ward</option>
-                                {WARDS.map(w => <option key={w} value={w}>{w}</option>)}
-                            </select>
-                        </div>
-                        <div>
-                            <label className="text-xs font-bold text-gray-500 uppercase block mb-1">To Bed</label>
-                            <input className="w-full border rounded-lg px-3 py-2 text-sm" value={transferInputs.to_bed} onChange={e => setTransferInputs({...transferInputs, to_bed: e.target.value})} />
-                        </div>
-                    </div>
-                    <div className="flex justify-end gap-3 mt-6">
-                        <button onClick={() => setTransferAction(null)} className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg text-sm font-bold border border-gray-300">Cancel</button>
-                        <button onClick={handleConfirmTransfer} disabled={loading} className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-bold shadow-sm hover:bg-blue-700">Transfer</button>
-                    </div>
-                </div>
-            </div>
-        )}
-
-        {/* Status Change Modal (Row Action) - Reusing logic from DetailModal but lifted */}
-        {statusAction && statusAction.isOpen && (
              <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-[150] p-4 backdrop-blur-sm">
-                <div className="bg-white text-gray-900 rounded-xl shadow-2xl p-6 max-w-sm w-full animate-fade-in border border-gray-200">
-                    <h3 className="text-lg font-bold text-gray-800 mb-2 border-b border-gray-200 pb-2">Confirm {statusAction.type}</h3>
-                    
-                    <div className="space-y-4">
-                        <div>
-                            <label className="text-xs font-bold text-gray-500 uppercase block mb-1">Date & Time</label>
-                            <input type="datetime-local" className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white text-gray-900 focus:ring-2 focus:ring-blue-500 outline-none [color-scheme:light]" value={actionDateTime} onChange={(e) => setActionDateTime(e.target.value)} />
-                        </div>
-
-                        {statusAction.type === 'Dose Change' && (
-                            <div>
-                                <label className="text-xs font-bold text-gray-500 uppercase block mb-1">New Dose</label>
-                                <input className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-teal-500 outline-none text-gray-900" placeholder="e.g. 500mg" value={newDoseValue} onChange={(e) => setNewDoseValue(e.target.value)} />
-                                <label className="text-xs font-bold text-gray-500 uppercase block mt-2 mb-1">Reason for Change</label>
-                                <select className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm mb-2 bg-white text-gray-900 [color-scheme:light]" value={statusReasonType} onChange={(e) => setStatusReasonType(e.target.value)}>
-                                    <option value="">Select Reason</option>
-                                    {DOSE_CHANGE_REASONS.map(r => <option key={r} value={r}>{r}</option>)}
-                                </select>
-                                {statusReasonType === 'Others (Specify)' && (
-                                    <input className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-teal-500 outline-none mt-2 text-gray-900" placeholder="Specify reason..." value={statusReasonText} onChange={(e) => setStatusReasonText(e.target.value)} />
-                                )}
-                            </div>
-                        )}
-
-                        {(statusAction.type === 'Stopped' || statusAction.type === 'Shifted') && (
-                            <div>
-                                <label className="text-xs font-bold text-gray-500 uppercase block mb-1">Reason</label>
-                                <select className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm mb-2 bg-white text-gray-900 [color-scheme:light]" value={statusReasonType} onChange={(e) => setStatusReasonType(e.target.value)}>
-                                    <option value="">Select Reason</option>
-                                    {statusAction.type === 'Stopped' ? STOP_REASONS.filter(r => r !== 'Course Completed').map(r => <option key={r} value={r}>{r}</option>) : SHIFT_REASONS.map(r => <option key={r} value={r}>{r}</option>)}
-                                </select>
-                                {statusReasonType === 'Others (Specify)' && (
-                                    <textarea className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white text-gray-900 focus:ring-2 focus:ring-blue-500 outline-none" rows={3} placeholder="Specify reason..." value={statusReasonText} onChange={(e) => setStatusReasonText(e.target.value)} />
-                                )}
-                            </div>
-                        )}
-
-                        {statusAction.type === 'Continue' && (
-                            <div>
-                                <label className="text-xs font-bold text-gray-500 uppercase block mb-1">Ordered By (Resident Name)</label>
-                                <input type="text" className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white text-gray-900 focus:ring-2 focus:ring-blue-500 outline-none" placeholder="e.g. Dr. Juan Dela Cruz" value={continueResident} onChange={(e) => setContinueResident(e.target.value)} />
-                            </div>
-                        )}
-                    </div>
-
+                <div className="bg-white text-gray-900 rounded-xl shadow-2xl p-6 max-w-sm w-full">
+                    <h3 className="text-lg font-bold text-gray-800 mb-2">Confirm Action</h3>
+                    <p className="text-sm text-gray-600 mb-4">
+                        Are you sure you want to {dispositionAction.action.toLowerCase()} patient <strong>{dispositionAction.patient.patient_name}</strong>?
+                    </p>
                     <div className="flex justify-end gap-2 mt-6">
-                        <button onClick={() => setStatusAction(null)} className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg text-sm font-medium bg-white border border-gray-300">Cancel</button>
-                        <button onClick={confirmStatusChange} disabled={!actionDateTime || loading} className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-bold shadow-sm hover:bg-blue-700 transition-colors">Confirm</button>
+                        <button onClick={() => setDispositionAction(null)} className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg text-sm font-medium bg-white border border-gray-300 shadow-sm">Cancel</button>
+                        <button onClick={confirmDisposition} className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-bold shadow-sm hover:bg-blue-700">Confirm</button>
                     </div>
                 </div>
             </div>
         )}
+        
+        {transferAction && (
+          <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-[150] p-4 backdrop-blur-sm">
+            <div className="bg-white text-gray-900 rounded-xl shadow-2xl p-6 max-w-md w-full">
+              <h3 className="text-lg font-bold text-gray-800 mb-2">Transfer Patient</h3>
+              <p className="text-sm text-gray-600 mb-4">Transferring: <span className="font-semibold">{transferAction.patient.patient_name}</span></p>
+              <div className="space-y-4">
+                <div>
+                  <label className="text-xs font-bold text-gray-500 uppercase">New Ward</label>
+                  <select className="w-full border rounded-lg px-3 py-2 mt-1 bg-white text-gray-900 border-gray-300 [color-scheme:light]" value={transferInputs.to_ward} onChange={e => setTransferInputs({...transferInputs, to_ward: e.target.value})}>
+                    <option value="">Select Ward</option>
+                    {WARDS.map(w => <option key={w} value={w}>{w}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="text-xs font-bold text-gray-500 uppercase">New Bed No.</label>
+                  <input className="w-full border rounded-lg px-3 py-2 mt-1 bg-white text-gray-900 border-gray-300" value={transferInputs.to_bed} onChange={e => setTransferInputs({...transferInputs, to_bed: e.target.value})} />
+                </div>
+                <div>
+                  <label className="text-xs font-bold text-gray-500 uppercase">Date & Time of Transfer</label>
+                  <input type="datetime-local" className="w-full border rounded-lg px-3 py-2 mt-1 bg-white text-gray-900 border-gray-300 [color-scheme:light]" value={transferInputs.date} onChange={e => setTransferInputs({...transferInputs, date: e.target.value})} />
+                </div>
+              </div>
+              <div className="flex justify-end gap-2 mt-6">
+                <button onClick={() => setTransferAction(null)} className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg text-sm font-medium bg-white border border-gray-300">Cancel</button>
+                <button onClick={handleConfirmTransfer} disabled={loading} className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-bold shadow-sm hover:bg-blue-700">Confirm Transfer</button>
+              </div>
+            </div>
+          </div>
+        )}
 
-        {/* Sensitivity Modal (Lifted) */}
-        {sensitivityModal && sensitivityModal.isOpen && (
-            <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-[150] p-4 backdrop-blur-sm">
-                <div className="bg-white text-gray-900 rounded-xl shadow-2xl p-6 max-w-sm w-full animate-fade-in border border-gray-200">
-                    <h3 className="text-lg font-bold text-gray-800 mb-4 border-b border-gray-200 pb-2 flex items-center gap-2">
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-indigo-600" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 1111.314 0z" clipRule="evenodd" /></svg>
-                        Add Sensitivity Data
-                    </h3>
-                    <div className="space-y-4">
-                        <div>
-                            <label className="text-xs font-bold text-gray-500 uppercase block mb-1">Result / Pattern</label>
-                            <textarea className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white text-gray-900 focus:ring-2 focus:ring-indigo-500 outline-none" rows={3} placeholder="e.g. E.coli ESBL+, Sensitive to Meropenem" value={sensitivityModal.info} onChange={(e) => setSensitivityModal({...sensitivityModal, info: e.target.value})} />
-                        </div>
-                        <div>
-                            <label className="text-xs font-bold text-gray-500 uppercase block mb-1">Date Available</label>
-                            <input type="date" className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white text-gray-900 focus:ring-2 focus:ring-indigo-500 outline-none [color-scheme:light]" value={sensitivityModal.date} onChange={(e) => setSensitivityModal({...sensitivityModal, date: e.target.value})} />
-                        </div>
+    {/* Status Change Sub-Modal */}
+    {statusAction && statusAction.isOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-[150] p-4 backdrop-blur-sm">
+            <div className="bg-white text-gray-900 rounded-xl shadow-2xl p-6 max-w-sm w-full animate-fade-in border border-gray-200">
+                <h3 className="text-lg font-bold text-gray-800 mb-2 border-b border-gray-200 pb-2">Confirm {statusAction.type}</h3>
+                
+                <div className="space-y-4">
+                    <div>
+                        <label className="text-xs font-bold text-gray-500 uppercase block mb-1">Date & Time</label>
+                        <input type="datetime-local" className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white text-gray-900 focus:ring-2 focus:ring-blue-500 outline-none [color-scheme:light]" value={actionDateTime} onChange={(e) => setActionDateTime(e.target.value)} />
                     </div>
-                    <div className="flex justify-end gap-2 mt-6">
-                        <button onClick={() => setSensitivityModal(null)} className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg text-sm font-medium bg-white border border-gray-300">Cancel</button>
-                        <button onClick={saveSensitivity} disabled={loading} className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-bold shadow-sm hover:bg-indigo-700 transition-colors">Save</button>
-                    </div>
+
+                    {statusAction.type === 'Dose Change' && (
+                        <div>
+                            <label className="text-xs font-bold text-gray-500 uppercase block mb-1">New Dose</label>
+                            <input className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-teal-500 outline-none text-gray-900" placeholder="e.g. 500mg" value={newDoseValue} onChange={(e) => setNewDoseValue(e.target.value)} />
+                            <label className="text-xs font-bold text-gray-500 uppercase block mt-2 mb-1">Reason for Change</label>
+                            <select 
+                                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm mb-2 bg-white text-gray-900 [color-scheme:light]"
+                                value={statusReasonType}
+                                onChange={(e) => setStatusReasonType(e.target.value)}
+                            >
+                                <option value="">Select Reason</option>
+                                {DOSE_CHANGE_REASONS.map(r => <option key={r} value={r}>{r}</option>)}
+                            </select>
+                            {statusReasonType === 'Others (Specify)' && (
+                                <input 
+                                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-teal-500 outline-none mt-2 text-gray-900" 
+                                    placeholder="Specify reason..." 
+                                    value={statusReasonText} 
+                                    onChange={(e) => setStatusReasonText(e.target.value)} 
+                                />
+                            )}
+                        </div>
+                    )}
+
+                    {(statusAction.type === 'Stopped' || statusAction.type === 'Shifted') && (
+                        <div>
+                            <label className="text-xs font-bold text-gray-500 uppercase block mb-1">Reason</label>
+                            <select 
+                                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm mb-2 bg-white text-gray-900 [color-scheme:light]"
+                                value={statusReasonType}
+                                onChange={(e) => setStatusReasonType(e.target.value)}
+                            >
+                                <option value="">Select Reason</option>
+                                {statusAction.type === 'Stopped' 
+                                    ? STOP_REASONS.filter(r => r !== 'Course Completed').map(r => <option key={r} value={r}>{r}</option>)
+                                    : SHIFT_REASONS.map(r => <option key={r} value={r}>{r}</option>)
+                                }
+                            </select>
+                            
+                            {statusReasonType === 'Others (Specify)' && (
+                                <textarea 
+                                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white text-gray-900 focus:ring-2 focus:ring-blue-500 outline-none" 
+                                    rows={3}
+                                    placeholder="Specify reason..."
+                                    value={statusReasonText}
+                                    onChange={(e) => setStatusReasonText(e.target.value)}
+                                />
+                            )}
+                        </div>
+                    )}
+
+                    {statusAction.type === 'Continue' && (
+                        <div>
+                            <label className="text-xs font-bold text-gray-500 uppercase block mb-1">Ordered By (Resident Name)</label>
+                            <input 
+                                type="text"
+                                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white text-gray-900 focus:ring-2 focus:ring-blue-500 outline-none"
+                                placeholder="e.g. Dr. Juan Dela Cruz"
+                                value={continueResident}
+                                onChange={(e) => setContinueResident(e.target.value)}
+                            />
+                        </div>
+                    )}
+                </div>
+
+                <div className="flex justify-end gap-2 mt-6">
+                    <button onClick={() => setStatusAction(null)} className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg text-sm font-medium bg-white border border-gray-300">Cancel</button>
+                    <button onClick={confirmStatusChange} disabled={!actionDateTime || loading} className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-bold shadow-sm hover:bg-blue-700 transition-colors">Confirm</button>
                 </div>
             </div>
-        )}
+        </div>
+    )}
 
-        {/* Edit Drug Modal (Lifted) */}
-        {drugToEdit && (
-            <EditDrugModal 
-                drug={drugToEdit.drug} 
-                onSave={handleSaveEditedDrug} 
-                onClose={() => setDrugToEdit(null)} 
-            />
-        )}
+    {/* Sensitivity Sub-Modal */}
+    {sensitivityModal && sensitivityModal.isOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-[150] p-4 backdrop-blur-sm">
+            <div className="bg-white text-gray-900 rounded-xl shadow-2xl p-6 max-w-sm w-full animate-fade-in border border-gray-200">
+                <h3 className="text-lg font-bold text-gray-800 mb-4 border-b border-gray-200 pb-2 flex items-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-indigo-600" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 1111.314 0z" clipRule="evenodd" /></svg>
+                    Add Sensitivity Data
+                </h3>
+                
+                <div className="space-y-4">
+                    <div>
+                        <label className="text-xs font-bold text-gray-500 uppercase block mb-1">Result / Pattern</label>
+                        <textarea 
+                            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white text-gray-900 focus:ring-2 focus:ring-indigo-500 outline-none" 
+                            rows={3}
+                            placeholder="e.g. E.coli ESBL+, Sensitive to Meropenem"
+                            value={sensitivityModal.info}
+                            onChange={(e) => setSensitivityModal({...sensitivityModal, info: e.target.value})}
+                        />
+                    </div>
+                    <div>
+                        <label className="text-xs font-bold text-gray-500 uppercase block mb-1">Date Available</label>
+                        <input 
+                            type="date" 
+                            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white text-gray-900 focus:ring-2 focus:ring-indigo-500 outline-none [color-scheme:light]" 
+                            value={sensitivityModal.date}
+                            onChange={(e) => setSensitivityModal({...sensitivityModal, date: e.target.value})}
+                        />
+                    </div>
+                </div>
+
+                <div className="flex justify-end gap-2 mt-6">
+                    <button onClick={() => setSensitivityModal(null)} className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg text-sm font-medium bg-white border border-gray-300">Cancel</button>
+                    <button onClick={saveSensitivity} disabled={loading} className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-bold shadow-sm hover:bg-indigo-700 transition-colors">Save</button>
+                </div>
+            </div>
+        </div>
+    )}
+
+    {/* Edit Drug Modal */}
+    {drugToEdit && (
+        <EditDrugModal 
+            drug={drugToEdit.drug} 
+            onClose={() => setDrugToEdit(null)} 
+            onSave={handleSaveEditedDrug} 
+        />
+    )}
 
     </div>
   );

@@ -215,7 +215,7 @@ export interface MonitoringPatient {
   transfer_history?: TransferLog[]; // History of ward movements
   
   status: 'Admitted' | 'Discharged' | 'Expired';
-  discharged_at?: string;
+  discharged_at?: string | null; // Changed to allow null
   
   last_updated_by?: string; // Pharmacist name who last edited
 }
