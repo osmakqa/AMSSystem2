@@ -194,17 +194,24 @@ const getDayNumber = (startDate: string, targetDate: Date) => {
     return diffDays >= 0 ? diffDays + 1 : 1;
 };
 
-// --- Quick Log Popover Component ---
-interface QuickLogPopoverProps {
+// --- Grid Log Modal Component (Replaces Popover) ---
+interface GridLogModalProps {
+    isOpen: boolean;
     onClose: () => void;
     onSave: (time: string, status: 'Given' | 'Missed', reason?: string) => void;
     defaultTime: string;
+    drugName: string;
+    dateStr: string;
+    doseLabel: string;
 }
 
-const QuickLogPopover: React.FC<QuickLogPopoverProps> = ({ onClose, onSave, defaultTime }) => {
+const GridLogModal: React.FC<GridLogModalProps> = ({ isOpen, onClose, onSave, defaultTime, drugName, dateStr, doseLabel }) => {
     const [time, setTime] = useState(defaultTime);
     const [status, setStatus] = useState<'Given' | 'Missed'>('Given');
     const [reason, setReason] = useState('');
+    const [otherReason, setOtherReason] = useState('');
+
+    if (!isOpen) return null;
 
     const handleSave = () => {
         if (status === 'Given' && !time) {
@@ -215,36 +222,63 @@ const QuickLogPopover: React.FC<QuickLogPopoverProps> = ({ onClose, onSave, defa
             alert("Reason is required");
             return;
         }
-        onSave(to12h(time), status, reason);
+        const finalReason = reason === 'Others (Specify)' ? otherReason : reason;
+        if (status === 'Missed' && reason === 'Others (Specify)' && !finalReason) {
+            alert("Please specify the reason.");
+            return;
+        }
+        onSave(to12h(time), status, finalReason);
     };
 
     return (
-        <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 z-50 bg-white rounded-lg shadow-xl border border-gray-200 p-3 w-64 animate-fade-in">
-            <div className="flex bg-gray-100 p-1 rounded-md mb-3">
-                <button onClick={() => setStatus('Given')} className={`flex-1 py-1 text-xs font-bold rounded ${status === 'Given' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-500'}`}>Given</button>
-                <button onClick={() => setStatus('Missed')} className={`flex-1 py-1 text-xs font-bold rounded ${status === 'Missed' ? 'bg-white text-red-600 shadow-sm' : 'text-gray-500'}`}>Missed</button>
-            </div>
-            
-            {status === 'Given' ? (
-                <div className="mb-3">
-                    <label className="text-[10px] uppercase font-bold text-gray-500 mb-1 block">Time</label>
-                    <input type="time" className="w-full border rounded px-2 py-1 text-sm" value={time} onChange={(e) => setTime(e.target.value)} autoFocus />
+        <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-[160] p-4 backdrop-blur-sm animate-fade-in" onClick={onClose}>
+            <div className="bg-white rounded-xl shadow-2xl w-full max-w-sm overflow-hidden border border-gray-200" onClick={e => e.stopPropagation()}>
+                <div className="bg-blue-600 px-6 py-4 border-b border-blue-700 flex justify-between items-start">
+                    <div>
+                        <h3 className="font-bold text-white text-lg">{drugName}</h3>
+                        <p className="text-blue-100 text-sm mt-1">{doseLabel} • {new Date(dateStr).toLocaleDateString()}</p>
+                    </div>
+                    <button onClick={onClose} className="text-blue-200 hover:text-white"><svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg></button>
                 </div>
-            ) : (
-                <div className="mb-3">
-                    <label className="text-[10px] uppercase font-bold text-gray-500 mb-1 block">Reason</label>
-                    <select className="w-full border rounded px-2 py-1 text-sm" value={reason} onChange={(e) => setReason(e.target.value)}>
-                        <option value="">Select...</option>
-                        {MISSED_REASONS.map(r => <option key={r} value={r}>{r}</option>)}
-                    </select>
-                </div>
-            )}
+                
+                <div className="p-6 space-y-5">
+                    {/* Status Toggle */}
+                    <div className="flex bg-gray-100 p-1 rounded-lg border border-gray-200">
+                        <button onClick={() => setStatus('Given')} className={`flex-1 py-2 text-sm font-bold rounded-md transition-all ${status === 'Given' ? 'bg-white text-blue-600 shadow-sm border border-gray-200' : 'text-gray-500 hover:text-gray-700'}`}>Given</button>
+                        <button onClick={() => setStatus('Missed')} className={`flex-1 py-2 text-sm font-bold rounded-md transition-all ${status === 'Missed' ? 'bg-white text-red-600 shadow-sm border border-gray-200' : 'text-gray-500 hover:text-gray-700'}`}>Missed</button>
+                    </div>
 
-            <div className="flex justify-end gap-2">
-                <button onClick={onClose} className="text-xs text-gray-500 hover:bg-gray-100 px-2 py-1 rounded border border-gray-200">Cancel</button>
-                <button onClick={handleSave} className="text-xs bg-blue-600 text-white px-3 py-1 rounded font-bold hover:bg-blue-700 shadow-sm">Save</button>
+                    {status === 'Given' ? (
+                        <div>
+                            <label className="text-xs font-bold text-gray-500 uppercase mb-1 block">Administration Time</label>
+                            <input type="time" className="w-full border rounded-lg px-3 py-2 text-base text-gray-900 focus:ring-2 focus:ring-blue-500 outline-none" value={time} onChange={(e) => setTime(e.target.value)} autoFocus />
+                        </div>
+                    ) : (
+                        <div className="space-y-3">
+                            <div>
+                                <label className="text-xs font-bold text-gray-500 uppercase mb-1 block">Reason for Missed Dose</label>
+                                <select className="w-full border rounded-lg px-3 py-2 text-sm bg-white text-gray-900 focus:ring-2 focus:ring-red-500 outline-none" value={reason} onChange={(e) => setReason(e.target.value)}>
+                                    <option value="">Select Reason...</option>
+                                    {MISSED_REASONS.map(r => <option key={r} value={r}>{r}</option>)}
+                                </select>
+                            </div>
+                            {reason === 'Others (Specify)' && (
+                                <div>
+                                    <label className="text-xs font-bold text-gray-500 uppercase mb-1 block">Specify Reason</label>
+                                    <input className="w-full border rounded-lg px-3 py-2 text-sm text-gray-900 focus:ring-2 focus:ring-red-500 outline-none" placeholder="Enter reason..." value={otherReason} onChange={(e) => setOtherReason(e.target.value)} />
+                                </div>
+                            )}
+                        </div>
+                    )}
+                </div>
+
+                <div className="bg-gray-50 px-6 py-4 border-t border-gray-200 flex justify-end gap-3">
+                    <button onClick={onClose} className="px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg text-sm font-bold shadow-sm hover:bg-gray-100">Cancel</button>
+                    <button onClick={handleSave} className={`px-4 py-2 text-white rounded-lg text-sm font-bold shadow-sm transition-colors ${status === 'Given' ? 'bg-blue-600 hover:bg-blue-700' : 'bg-red-600 hover:bg-red-700'}`}>
+                        {status === 'Given' ? 'Log Dose' : 'Log Missed'}
+                    </button>
+                </div>
             </div>
-            <div className="absolute -top-1.5 left-1/2 -translate-x-1/2 w-3 h-3 bg-white border-t border-l border-gray-200 rotate-45"></div>
         </div>
     );
 };
@@ -339,12 +373,12 @@ interface ExpansionRowProps {
 }
 const ExpansionRow: React.FC<ExpansionRowProps> = ({ patient, onAddLog, onViewFullSheet, onStatusAction, onSensitivityAction, onEditDrug }) => {
     const activeDrugs = patient.antimicrobials.filter(drug => drug.status === 'Active');
-    const [activeCell, setActiveCell] = useState<{ drugId: string, dateStr: string } | null>(null);
+    const [selectedSlot, setSelectedSlot] = useState<{ drugId: string, dateStr: string, drugName: string, doseLabel: string } | null>(null);
 
-    const handleQuickLogSave = async (time: string, status: 'Given' | 'Missed', reason?: string) => {
-        if (activeCell) {
-            await onAddLog(patient.id, activeCell.drugId, activeCell.dateStr, time, status, reason);
-            setActiveCell(null);
+    const handleLogSave = async (time: string, status: 'Given' | 'Missed', reason?: string) => {
+        if (selectedSlot) {
+            await onAddLog(patient.id, selectedSlot.drugId, selectedSlot.dateStr, time, status, reason);
+            setSelectedSlot(null);
         }
     };
 
@@ -433,7 +467,6 @@ const ExpansionRow: React.FC<ExpansionRowProps> = ({ patient, onAddLog, onViewFu
                                                     const logs = drug.administration_log?.[dateStr] || [];
                                                     const entry = logs[slotIdx];
                                                     const logData = entry ? normalizeLogEntry(entry) : null;
-                                                    const isActive = activeCell?.drugId === drug.id && activeCell?.dateStr === dateStr && !logData;
                                                     
                                                     return (
                                                         <td key={dateStr} className="p-1 border-r border-b border-gray-100 text-center align-middle hover:bg-blue-50 transition-colors relative">
@@ -449,21 +482,17 @@ const ExpansionRow: React.FC<ExpansionRowProps> = ({ patient, onAddLog, onViewFu
                                                                     )}
                                                                 </div>
                                                             ) : (
-                                                                <>
-                                                                    <button 
-                                                                        onClick={() => setActiveCell({ drugId: drug.id, dateStr })} 
-                                                                        className="w-full h-full min-h-[28px] rounded hover:bg-blue-100 text-gray-300 hover:text-blue-500 flex items-center justify-center transition-colors"
-                                                                    >
-                                                                        <span className="text-base leading-none">+</span>
-                                                                    </button>
-                                                                    {isActive && (
-                                                                        <QuickLogPopover 
-                                                                            onClose={() => setActiveCell(null)}
-                                                                            onSave={handleQuickLogSave}
-                                                                            defaultTime={new Date().toTimeString().slice(0, 5)}
-                                                                        />
-                                                                    )}
-                                                                </>
+                                                                <button 
+                                                                    onClick={() => setSelectedSlot({ 
+                                                                        drugId: drug.id, 
+                                                                        dateStr,
+                                                                        drugName: drug.drug_name,
+                                                                        doseLabel: `Dose ${slotIdx + 1}`
+                                                                    })} 
+                                                                    className="w-full h-full min-h-[28px] rounded hover:bg-blue-100 text-gray-300 hover:text-blue-500 flex items-center justify-center transition-colors"
+                                                                >
+                                                                    <span className="text-base leading-none">+</span>
+                                                                </button>
                                                             )}
                                                         </td>
                                                     );
@@ -477,7 +506,19 @@ const ExpansionRow: React.FC<ExpansionRowProps> = ({ patient, onAddLog, onViewFu
                     );
                 })}
             </div>
-            {activeCell && <div className="fixed inset-0 z-40" onClick={() => setActiveCell(null)}></div>}
+            
+            {/* Grid Log Modal Triggered by Cell Click */}
+            {selectedSlot && (
+                <GridLogModal 
+                    isOpen={!!selectedSlot}
+                    onClose={() => setSelectedSlot(null)}
+                    onSave={handleLogSave}
+                    defaultTime={new Date().toTimeString().slice(0, 5)}
+                    drugName={selectedSlot.drugName}
+                    dateStr={selectedSlot.dateStr}
+                    doseLabel={selectedSlot.doseLabel}
+                />
+            )}
         </div>
     );
 }
@@ -1627,7 +1668,7 @@ const AMSMonitoring: React.FC<AMSMonitoringProps> = ({ user }) => {
         <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-[150] p-4 backdrop-blur-sm">
             <div className="bg-white text-gray-900 rounded-xl shadow-2xl p-6 max-w-sm w-full animate-fade-in border border-gray-200">
                 <h3 className="text-lg font-bold text-gray-800 mb-4 border-b border-gray-200 pb-2 flex items-center gap-2">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-indigo-600" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z" clipRule="evenodd" /></svg>
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-indigo-600" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 1111.314 0z" clipRule="evenodd" /></svg>
                     Add Sensitivity Data
                 </h3>
                 

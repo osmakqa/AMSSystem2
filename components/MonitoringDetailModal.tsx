@@ -10,21 +10,8 @@ interface MonitoringDetailModalProps {
   patient: MonitoringPatient | null;
   user: User | null;
   onUpdate: () => void;
-  // Lifted state props
   onOpenAdminModal: (patientId: number, drugId: string, dateStr: string) => void;
 }
-
-// Helper to calc eGFR
-const calculateEgfr = (age: number, sex: string, scr: number) => {
-    if (!age || !scr) return "";
-    const scrMgDl = scr / 88.4;
-    const k = sex === "Female" ? 0.7 : 0.9;
-    const alpha = sex === "Female" ? -0.241 : -0.302;
-    const minScr = Math.min(scrMgDl/k,1);
-    const maxScr = Math.max(scrMgDl/k,1);
-    const egfr = 142 * Math.pow(minScr,alpha) * Math.pow(maxScr,-1.2) * Math.pow(0.9938, age) * (sex === "Female" ? 1.012 : 1);
-    return isFinite(egfr) ? egfr.toFixed(1) + ' mL/min/1.73m²' : "";
-};
 
 // Time Helpers
 const to12h = (time24: string) => {
@@ -72,15 +59,20 @@ const DOSE_CHANGE_REASONS = [
     "Others (Specify)"
 ];
 
+const InfoItem = ({ label, value, fullWidth = false }: { label: string, value?: any, fullWidth?: boolean }) => (
+    <div className={fullWidth ? 'col-span-full' : ''}>
+        <p className="text-xs font-bold text-gray-500 uppercase">{label}</p>
+        <p className="text-sm font-medium text-gray-900 break-words">{value || '—'}</p>
+    </div>
+);
+
 const MonitoringDetailModal: React.FC<MonitoringDetailModalProps> = ({ isOpen, onClose, patient, user, onUpdate, onOpenAdminModal }) => {
   const [activeTab, setActiveTab] = useState<'Antimicrobials' | 'Details'>('Antimicrobials');
-  const [formData, setFormData] = useState<Partial<MonitoringPatient>>({});
   
   // Transfer State
   const [isTransferring, setIsTransferring] = useState(false);
   const [transferData, setTransferData] = useState({ to_ward: '', to_bed: '' });
   const [transferDate, setTransferDate] = useState('');
-  const [editingTransferIndex, setEditingTransferIndex] = useState<number | null>(null);
 
   // New Drug Form State
   const [newDrug, setNewDrug] = useState<Partial<MonitoringAntimicrobial>>({});
@@ -122,7 +114,6 @@ const MonitoringDetailModal: React.FC<MonitoringDetailModalProps> = ({ isOpen, o
 
   useEffect(() => {
     if (patient) {
-        setFormData({ ...patient });
         resetNewDrugForm();
         setTransferData({ to_ward: patient.ward, to_bed: patient.bed_number });
         setActiveTab('Antimicrobials'); // Default to this tab
@@ -139,16 +130,9 @@ const MonitoringDetailModal: React.FC<MonitoringDetailModalProps> = ({ isOpen, o
       setIsOtherRoute(false);
   };
 
-  const initTransferForm = (isEdit: boolean, log?: TransferLog, index?: number) => {
-      if (isEdit && log && index !== undefined) {
-          setEditingTransferIndex(index);
-          setTransferData({ to_ward: log.to_ward, to_bed: log.to_bed });
-          setTransferDate(toLocalISO(log.date));
-      } else {
-          setEditingTransferIndex(null);
-          setTransferData({ to_ward: '', to_bed: '' });
-          setTransferDate(toLocalISO());
-      }
+  const initTransferForm = () => {
+      setTransferData({ to_ward: '', to_bed: '' });
+      setTransferDate(toLocalISO());
       setIsTransferring(true);
   };
   
@@ -194,31 +178,6 @@ const MonitoringDetailModal: React.FC<MonitoringDetailModalProps> = ({ isOpen, o
 
   if (!isOpen || !patient) return null;
 
-  const handlePatientUpdate = async () => {
-      setLoading(true);
-      try {
-          const { id, created_at, antimicrobials, transfer_history, ...editableFields } = formData;
-          const updates: Partial<MonitoringPatient> = { 
-              ...editableFields, 
-              last_updated_by: user?.name 
-          };
-
-          if (formData.latest_creatinine && formData.age && formData.sex) {
-              const newEgfr = calculateEgfr(Number(formData.age), formData.sex, Number(formData.latest_creatinine));
-              if (newEgfr) updates.egfr = newEgfr;
-          }
-
-          await updateMonitoringPatient(patient.id, updates);
-          onUpdate();
-          alert("Patient details updated.");
-      } catch (e: any) {
-          console.error("Update Monitoring Patient error:", JSON.stringify(e, null, 2));
-          alert(`Update Monitoring Patient error:\n${e.message || "Unknown error"}`);
-      } finally {
-          setLoading(false);
-      }
-  };
-
   const handleTransfer = async () => {
       if (!transferData.to_ward || !transferData.to_bed || !transferDate) {
           alert("Please select destination ward, bed number, and date/time.");
@@ -226,44 +185,26 @@ const MonitoringDetailModal: React.FC<MonitoringDetailModalProps> = ({ isOpen, o
       }
       setLoading(true);
       try {
-        let newHistory = [...(patient.transfer_history || [])];
+        const newLog: TransferLog = {
+            date: new Date(transferDate).toISOString(),
+            from_ward: patient.ward,
+            to_ward: transferData.to_ward,
+            from_bed: patient.bed_number,
+            to_bed: transferData.to_bed
+        };
+        const newHistory = [...(patient.transfer_history || []), newLog];
         
-        if (editingTransferIndex !== null) {
-            // Edit existing log
-            newHistory[editingTransferIndex] = {
-                ...newHistory[editingTransferIndex],
-                date: new Date(transferDate).toISOString(),
-                to_ward: transferData.to_ward,
-                to_bed: transferData.to_bed,
-            };
-        } else {
-            // Create new transfer log
-            const newLog: TransferLog = {
-                date: new Date(transferDate).toISOString(),
-                from_ward: patient.ward,
-                to_ward: transferData.to_ward,
-                from_bed: patient.bed_number,
-                to_bed: transferData.to_bed
-            };
-            newHistory.push(newLog);
-        }
-        
-        const updates: any = {
+        const updates: Partial<MonitoringPatient> = {
+            ward: transferData.to_ward,
+            bed_number: transferData.to_bed,
             transfer_history: newHistory,
             last_updated_by: user?.name
         };
-
-        // Update current location only if it's a NEW transfer (not editing history)
-        if (editingTransferIndex === null) {
-            updates.ward = transferData.to_ward;
-            updates.bed_number = transferData.to_bed;
-        }
         
         await updateMonitoringPatient(patient.id, updates);
         setIsTransferring(false);
-        setEditingTransferIndex(null);
         onUpdate();
-        alert(editingTransferIndex !== null ? "Transfer details updated." : "Patient transferred successfully.");
+        alert("Patient transferred successfully.");
       } catch (err: any) {
           alert("Error saving transfer: " + err.message);
       } finally {
@@ -629,7 +570,7 @@ const MonitoringDetailModal: React.FC<MonitoringDetailModalProps> = ({ isOpen, o
                     </div>
                 </div>
                 <div className="flex flex-col items-end gap-2">
-                    <button onClick={onClose} className="bg-blue-600 hover:bg-blue-500 p-2 rounded-full transition-colors">
+                    <button onClick={onClose} className="bg-blue-600 hover:bg-blue-50 p-2 rounded-full transition-colors">
                         <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
                     </button>
                     {patient.last_updated_by && <span className="text-xs text-blue-200">Last updated by: {patient.last_updated_by}</span>}
@@ -660,38 +601,17 @@ const MonitoringDetailModal: React.FC<MonitoringDetailModalProps> = ({ isOpen, o
                     <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
                         <h3 className="text-sm font-bold text-gray-500 uppercase tracking-wider border-b border-gray-100 pb-3 mb-4">Patient & Clinical Details</h3>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
-                            <div>
-                                <label className="text-xs font-bold text-gray-500 uppercase">Current Ward</label>
-                                <select className="w-full border rounded-lg px-3 py-2 text-sm mt-1 bg-white text-gray-900 border-gray-300 focus:ring-1 focus:ring-blue-500 [color-scheme:light]" value={formData.ward} onChange={e => setFormData({...formData, ward: e.target.value})}>
-                                    <option value="">Select Ward</option>
-                                    {WARDS.map(w => <option key={w} value={w}>{w}</option>)}
-                                </select>
-                            </div>
-                            <div>
-                                <label className="text-xs font-bold text-gray-500 uppercase">Bed Number</label>
-                                <input type="text" className="w-full border rounded-lg px-3 py-2 text-sm mt-1 bg-white text-gray-900 border-gray-300 focus:ring-1 focus:ring-blue-500" value={formData.bed_number} onChange={e => setFormData({...formData, bed_number: e.target.value})} />
-                            </div>
-                            <div>
-                                <label className="text-xs font-bold text-gray-500 uppercase">Age</label>
-                                <input type="number" className="w-full border rounded-lg px-3 py-2 text-sm mt-1 bg-white text-gray-900 border-gray-300 focus:ring-1 focus:ring-blue-500" value={formData.age} onChange={e => setFormData({...formData, age: e.target.value})} />
-                            </div>
-                            <div>
-                                <label className="text-xs font-bold text-gray-500 uppercase">Sex</label>
-                                <select className="w-full border rounded-lg px-3 py-2 text-sm mt-1 bg-white text-gray-900 border-gray-300 focus:ring-1 focus:ring-blue-500 [color-scheme:light]" value={formData.sex} onChange={e => setFormData({...formData, sex: e.target.value})}>
-                                    <option value="">Select</option><option value="Male">Male</option><option value="Female">Female</option>
-                                </select>
-                            </div>
-                             <div>
-                                <label className="text-xs font-bold text-gray-500 uppercase">SCr (µmol/L)</label>
-                                <input type="number" className="w-full border rounded-lg px-3 py-2 text-sm mt-1 bg-white text-gray-900 border-gray-300 focus:ring-1 focus:ring-blue-500" value={formData.latest_creatinine} onChange={e => setFormData({...formData, latest_creatinine: e.target.value})} />
-                            </div>
+                            <InfoItem label="Current Ward" value={patient.ward} />
+                            <InfoItem label="Bed Number" value={patient.bed_number} />
+                            <InfoItem label="Age" value={patient.age} />
+                            <InfoItem label="Sex" value={patient.sex} />
+                            <InfoItem label="SCr (µmol/L)" value={patient.latest_creatinine} />
                             <div className="bg-gray-50 p-3 rounded-lg border border-gray-200">
                                 <label className="text-[10px] font-bold text-gray-500 uppercase">Calculated eGFR</label>
-                                <p className="text-sm font-semibold text-blue-700">{formData.egfr || 'N/A'}</p>
+                                <p className="text-sm font-semibold text-blue-700">{patient.egfr || 'N/A'}</p>
                             </div>
                             <div className="md:col-span-2">
-                                <label className="text-xs font-bold text-gray-500 uppercase">Infectious Diagnosis</label>
-                                <textarea className="w-full border rounded-lg px-3 py-2 text-sm mt-1 bg-white text-gray-900 border-gray-300 focus:ring-1 focus:ring-blue-500" rows={3} value={formData.infectious_diagnosis} onChange={e => setFormData({...formData, infectious_diagnosis: e.target.value})} />
+                                <InfoItem label="Infectious Diagnosis" value={patient.infectious_diagnosis} fullWidth />
                             </div>
                         </div>
                     </div>
@@ -699,7 +619,7 @@ const MonitoringDetailModal: React.FC<MonitoringDetailModalProps> = ({ isOpen, o
                         <div className="flex justify-between items-center mb-3">
                             <h3 className="text-sm font-bold text-gray-500 uppercase tracking-wider">Ward Transfer History</h3>
                             {!isTransferring && (
-                                <button onClick={() => initTransferForm(false)} className="text-xs font-bold text-blue-600 hover:text-blue-700 bg-blue-50 px-3 py-1.5 rounded-lg border border-blue-100">
+                                <button onClick={() => initTransferForm()} className="text-xs font-bold text-blue-600 hover:text-blue-700 bg-blue-50 px-3 py-1.5 rounded-lg border border-blue-100">
                                     New Transfer Log
                                 </button>
                             )}
@@ -707,21 +627,21 @@ const MonitoringDetailModal: React.FC<MonitoringDetailModalProps> = ({ isOpen, o
                         {isTransferring && (
                             <div className="bg-blue-50 border border-blue-100 rounded-lg p-4 mb-4 animate-fade-in">
                                 <div className="flex justify-between items-center mb-3">
-                                    <h4 className="text-xs font-bold text-blue-800 uppercase">{editingTransferIndex !== null ? 'Edit Transfer Log' : 'New Transfer Log'}</h4>
+                                    <h4 className="text-xs font-bold text-blue-800 uppercase">New Transfer Log</h4>
                                 </div>
                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-3">
                                     <div><label className="text-xs font-bold text-gray-500">Date & Time</label><input type="datetime-local" className="w-full border rounded-lg px-2 py-2 text-sm mt-1 bg-white text-gray-900 border-gray-300 [color-scheme:light]" value={transferDate} onChange={e => setTransferDate(e.target.value)}/></div>
                                     <div><label className="text-xs font-bold text-gray-500">To Ward</label><select className="w-full border rounded-lg px-2 py-2 text-sm mt-1 bg-white text-gray-900 border-gray-300 [color-scheme:light]" value={transferData.to_ward} onChange={e => setTransferData({...transferData, to_ward: e.target.value})}><option value="">Select</option>{WARDS.map(w => <option key={w} value={w}>{w}</option>)}</select></div>
                                     <div><label className="text-xs font-bold text-gray-500">To Bed</label><input type="text" className="w-full border rounded-lg px-2 py-2 text-sm mt-1 bg-white text-gray-900 border-gray-300" value={transferData.to_bed} onChange={e => setTransferData({...transferData, to_bed: e.target.value})} /></div>
                                 </div>
-                                <div className="flex justify-end gap-2"><button onClick={() => setIsTransferring(false)} className="px-4 py-1.5 bg-white text-gray-600 border border-gray-300 rounded-lg text-xs font-bold hover:bg-gray-50">Cancel</button><button onClick={handleTransfer} className="px-4 py-1.5 bg-blue-600 text-white rounded-lg text-xs font-bold hover:bg-blue-700">{editingTransferIndex !== null ? 'Update Log' : 'Add Transfer'}</button></div>
+                                <div className="flex justify-end gap-2"><button onClick={() => setIsTransferring(false)} className="px-4 py-1.5 bg-white text-gray-600 border border-gray-300 rounded-lg text-xs font-bold hover:bg-gray-50">Cancel</button><button onClick={handleTransfer} className="px-4 py-1.5 bg-blue-600 text-white rounded-lg text-xs font-bold hover:bg-blue-700">Add Transfer</button></div>
                             </div>
                         )}
                         <div className="space-y-2">
                             {patient.transfer_history && patient.transfer_history.length > 0 ? patient.transfer_history.map((log, idx) => (
                                 <div key={idx} className="flex items-center justify-between text-sm bg-gray-50 p-3 rounded-lg border border-gray-200 group">
                                     <div><span className="font-semibold text-gray-800">{log.from_ward} ({log.from_bed})</span> <span className="text-gray-400 mx-1">→</span> <span className="font-semibold text-gray-800">{log.to_ward} ({log.to_bed})</span></div>
-                                    <div className="flex items-center gap-2"><span className="text-xs text-gray-500">{new Date(log.date).toLocaleString()}</span><button onClick={() => initTransferForm(true, log, idx)} className="text-blue-500 opacity-0 group-hover:opacity-100 hover:text-blue-700"><svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg></button></div>
+                                    <div className="flex items-center gap-2"><span className="text-xs text-gray-500">{new Date(log.date).toLocaleString()}</span></div>
                                 </div>
                             )) : <p className="text-sm text-gray-400 italic">No transfer history.</p>}
                         </div>
@@ -740,9 +660,6 @@ const MonitoringDetailModal: React.FC<MonitoringDetailModalProps> = ({ isOpen, o
                                 </button>
                             )}
                         </div>
-                        {patient.status === 'Admitted' && (
-                            <button onClick={handlePatientUpdate} disabled={loading} className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-bold shadow-md hover:shadow-lg transition-all">Save Patient Details</button>
-                        )}
                     </div>
                 </div>
             )}
@@ -895,6 +812,7 @@ const MonitoringDetailModal: React.FC<MonitoringDetailModalProps> = ({ isOpen, o
                                             <span className={`px-2.5 py-1 rounded-full text-xs font-bold uppercase tracking-wide ${statusBg}`}>
                                                 {drug.status}
                                             </span>
+                                            {/* Edit Button Restored */}
                                             {isActive && (
                                                 <button onClick={() => handleEditDrug(drug)} className="text-gray-400 hover:text-blue-600 transition-colors">
                                                     <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
