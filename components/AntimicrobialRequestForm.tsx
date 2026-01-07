@@ -55,24 +55,24 @@ const FormGroup = ({ label, children, className = '' }: { label: string, childre
   </div>
 );
 
-const Input = (props: React.InputHTMLAttributes<HTMLInputElement>) => (
+const Input = ({ error, ...props }: React.InputHTMLAttributes<HTMLInputElement> & { error?: boolean }) => (
   <input
     {...props}
-    className={`w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-green-500 focus:ring-1 focus:ring-green-500 bg-white text-gray-900 [color-scheme:light] ${props.className || ''}`}
+    className={`w-full rounded-lg border px-3 py-2 text-sm outline-none focus:ring-1 bg-white text-gray-900 [color-scheme:light] ${error ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-green-500 focus:ring-green-500'} ${props.className || ''}`}
   />
 );
 
-const Select = (props: React.SelectHTMLAttributes<HTMLSelectElement>) => (
+const Select = ({ error, ...props }: React.SelectHTMLAttributes<HTMLSelectElement> & { error?: boolean }) => (
   <select
     {...props}
-    className={`w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-green-500 focus:ring-1 focus:ring-green-500 bg-white text-gray-900 [color-scheme:light] ${props.className || ''}`}
+    className={`w-full rounded-lg border px-3 py-2 text-sm outline-none focus:ring-1 bg-white text-gray-900 [color-scheme:light] ${error ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-green-500 focus:ring-green-500'} ${props.className || ''}`}
   />
 );
 
-const Textarea = (props: React.TextareaHTMLAttributes<HTMLTextAreaElement>) => (
+const Textarea = ({ error, ...props }: React.TextareaHTMLAttributes<HTMLTextAreaElement> & { error?: boolean }) => (
   <textarea
     {...props}
-    className={`w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-green-500 focus:ring-1 focus:ring-green-500 bg-white text-gray-900 ${props.className || ''}`}
+    className={`w-full rounded-lg border px-3 py-2 text-sm outline-none focus:ring-1 bg-white text-gray-900 ${error ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-green-500 focus:ring-green-500'} ${props.className || ''}`}
   />
 );
 
@@ -259,7 +259,13 @@ const AntimicrobialRequestForm: React.FC<AntimicrobialRequestFormProps> = ({ isO
         return;
       }
       if (isActive) setIsCheckingRenal(true);
-      const result = await checkRenalDosing(formData.antimicrobial, formData.egfr_text, monograph.renal);
+      const result = await checkRenalDosing(
+        formData.antimicrobial, 
+        formData.egfr_text, 
+        monograph.renal,
+        formData.dose,
+        formData.frequency
+      );
 
       if (isActive) {
         setIsCheckingRenal(false);
@@ -272,7 +278,7 @@ const AntimicrobialRequestForm: React.FC<AntimicrobialRequestFormProps> = ({ isO
     };
     const timeoutId = setTimeout(runRenalCheck, 1500);
     return () => { isActive = false; clearTimeout(timeoutId); };
-  }, [formData.egfr_text, formData.antimicrobial, patientMode]);
+  }, [formData.egfr_text, formData.antimicrobial, patientMode, formData.dose, formData.frequency]);
 
   useEffect(() => {
     const currentDrug = formData.antimicrobial;
@@ -479,10 +485,9 @@ const AntimicrobialRequestForm: React.FC<AntimicrobialRequestFormProps> = ({ isO
         {/* Main Header - Underlying Header */}
         <header className="flex items-center justify-between gap-4 bg-[#009a3e] text-white px-6 py-4 sticky top-0 z-20 shadow-md">
           <div className="flex items-center gap-3">
-            <img src={LOGO_URL} alt="OsMak Logo" className="h-10 w-auto object-contain bg-white rounded-full p-1" />
             <div className="flex flex-col">
               <h3 className="text-lg font-bold leading-tight uppercase tracking-tight">Antimicrobial Request</h3>
-              <span className="text-[10px] font-medium opacity-80 uppercase tracking-widest">Digital Decision Support</span>
+              <span className="text-[11px] font-bold text-white/80 tracking-wide">Antimicrobial Stewardship</span>
             </div>
           </div>
           <button onClick={onClose} className="text-white/80 hover:text-white hover:bg-white/20 rounded-full p-2 transition-colors">
@@ -505,20 +510,20 @@ const AntimicrobialRequestForm: React.FC<AntimicrobialRequestFormProps> = ({ isO
                 <section className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm space-y-4">
                     <h4 className="text-[11px] font-black text-gray-400 uppercase tracking-widest border-b border-gray-100 pb-2">Patient Profile</h4>
                     <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                        <FormGroup label="Request Date"><Input type="date" name="req_date" value={formData.req_date} onChange={handleChange} /></FormGroup>
-                        <FormGroup label="Full Name (Last, First)" className="md:col-span-2"><Input name="patient_name" value={formData.patient_name} onChange={handleChange} placeholder="e.g. Dela Cruz, Juan" /></FormGroup>
-                        <FormGroup label="Hospital Number"><Input name="hospital_number" value={formData.hospital_number} onChange={handleChange} placeholder="ID Number" /></FormGroup>
-                        <FormGroup label="Age"><Input type="number" name="age" value={formData.age} onChange={handleChange} /></FormGroup>
-                        <FormGroup label="Sex"><Select name="sex" value={formData.sex} onChange={handleChange}><option value="">Select</option><option value="Male">Male</option><option value="Female">Female</option></Select></FormGroup>
-                        <FormGroup label="Weight (kg)"><Input type="number" step="0.1" name="weight_kg" value={formData.weight_kg} onChange={handleChange} /></FormGroup>
-                        <FormGroup label="Height (cm)" className={patientMode === 'pediatric' ? '' : 'hidden'}><Input type="number" step="0.1" name="height_cm" value={formData.height_cm} onChange={handleChange} /></FormGroup>
+                        <FormGroup label="Request Date"><Input error={!!validationErrors.req_date} type="date" name="req_date" value={formData.req_date} onChange={handleChange} /></FormGroup>
+                        <FormGroup label="Full Name (Last, First)" className="md:col-span-2"><Input error={!!validationErrors.patient_name} name="patient_name" value={formData.patient_name} onChange={handleChange} placeholder="e.g. Dela Cruz, Juan" /></FormGroup>
+                        <FormGroup label="Hospital Number"><Input error={!!validationErrors.hospital_number} name="hospital_number" value={formData.hospital_number} onChange={handleChange} placeholder="ID Number" /></FormGroup>
+                        <FormGroup label="Age"><Input error={!!validationErrors.age} type="number" name="age" value={formData.age} onChange={handleChange} /></FormGroup>
+                        <FormGroup label="Sex"><Select error={!!validationErrors.sex} name="sex" value={formData.sex} onChange={handleChange}><option value="">Select</option><option value="Male">Male</option><option value="Female">Female</option></Select></FormGroup>
+                        <FormGroup label="Weight (kg)"><Input error={!!validationErrors.weight_kg} type="number" step="0.1" name="weight_kg" value={formData.weight_kg} onChange={handleChange} /></FormGroup>
+                        <FormGroup label="Height (cm)" className={patientMode === 'pediatric' ? '' : 'hidden'}><Input error={!!validationErrors.height_cm} type="number" step="0.1" name="height_cm" value={formData.height_cm} onChange={handleChange} /></FormGroup>
                         <FormGroup label="Ward / Unit" className="md:col-span-2">
-                             <Select value={isCustomWard ? 'Others' : formData.ward} onChange={(e) => { const v = e.target.value; if(v==='Others') setIsCustomWard(true); else { setIsCustomWard(false); setFormData(p=>({...p, ward: v})); } }}>
+                             <Select error={!!validationErrors.ward} value={isCustomWard ? 'Others' : formData.ward} onChange={(e) => { const v = e.target.value; if(v==='Others') setIsCustomWard(true); else { setIsCustomWard(false); setFormData(p=>({...p, ward: v})); } }}>
                                 <option value="">Select Ward</option>
                                 {WARDS.map(w => <option key={w} value={w}>{w}</option>)}
                                 <option value="Others">Others (Specify)</option>
                              </Select>
-                             {isCustomWard && <Input className="mt-2" placeholder="Specify..." value={formData.ward} onChange={e => setFormData(p=>({...p, ward: e.target.value}))} />}
+                             {isCustomWard && <Input error={!!validationErrors.ward} className="mt-2" placeholder="Specify..." value={formData.ward} onChange={e => setFormData(p=>({...p, ward: e.target.value}))} />}
                         </FormGroup>
                     </div>
                 </section>
@@ -527,20 +532,20 @@ const AntimicrobialRequestForm: React.FC<AntimicrobialRequestFormProps> = ({ isO
                 <section className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm space-y-4">
                     <h4 className="text-[11px] font-black text-gray-400 uppercase tracking-widest border-b border-gray-100 pb-2">Clinical Data</h4>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <FormGroup label="Diagnosis"><Input name="diagnosis" value={formData.diagnosis} onChange={handleChange} placeholder="Primary working diagnosis" /></FormGroup>
+                        <FormGroup label="Diagnosis"><Input error={!!validationErrors.diagnosis} name="diagnosis" value={formData.diagnosis} onChange={handleChange} placeholder="Primary working diagnosis" /></FormGroup>
                         <FormGroup label="Indication Type">
-                             <div className="flex gap-2">
+                             <div className={`flex gap-2 p-1 rounded-lg ${validationErrors.selectedIndicationType ? 'border border-red-500 bg-red-50' : ''}`}>
                                 {(['Empiric', 'Prophylactic', 'Therapeutic'] as const).map(ind => (
                                     <button key={ind} type="button" onClick={() => setFormData(p=>({...p, selectedIndicationType: ind}))} className={`flex-1 py-2 text-xs font-bold rounded-lg border transition-all ${formData.selectedIndicationType === ind ? 'bg-green-50 border-green-500 text-green-700 shadow-sm' : 'bg-white border-gray-200 text-gray-400 hover:border-gray-300'}`}>{ind}</button>
                                 ))}
                              </div>
                         </FormGroup>
-                        <FormGroup label="Basis for Indication" className="md:col-span-2"><Textarea name="basis_indication" value={formData.basis_indication} onChange={handleChange} rows={2} /></FormGroup>
+                        <FormGroup label="Basis for Indication" className="md:col-span-2"><Textarea error={!!validationErrors.basis_indication} name="basis_indication" value={formData.basis_indication} onChange={handleChange} rows={2} /></FormGroup>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
                         <FormGroup label="SCr (µmol/L)">
                              <div className="flex items-center gap-2">
-                                <Input type="number" name="scr_mgdl" value={formData.scr_mgdl} onChange={handleChange} disabled={scrNotAvailable} className="flex-1" />
+                                <Input error={!!validationErrors.scr_mgdl} type="number" name="scr_mgdl" value={formData.scr_mgdl} onChange={handleChange} disabled={scrNotAvailable} className="flex-1" />
                                 <label className="flex items-center gap-1.5 cursor-pointer whitespace-nowrap"><input type="checkbox" checked={scrNotAvailable} onChange={e => setScrNotAvailable(e.target.checked)} className="rounded border-gray-300 text-green-600" /><span className="text-[10px] font-bold text-gray-400 uppercase">Pending</span></label>
                              </div>
                         </FormGroup>
@@ -557,15 +562,15 @@ const AntimicrobialRequestForm: React.FC<AntimicrobialRequestFormProps> = ({ isO
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <FormGroup label="Antimicrobial" className="md:col-span-2">
-                            <Select name="antimicrobial" value={formData.antimicrobial} onChange={handleChange}>
+                            <Select error={!!validationErrors.antimicrobial} name="antimicrobial" value={formData.antimicrobial} onChange={handleChange}>
                                 <option value="">Select Drug</option>
                                 {drugLists[patientMode].map(d => <option key={d.value} value={d.value}>{d.label} ({d.type})</option>)}
                             </Select>
                         </FormGroup>
                         <FormGroup label="Drug Type"><div className={`h-[38px] flex items-center justify-center px-3 rounded-lg text-xs font-black uppercase tracking-widest border ${formData.drug_type === DrugType.RESTRICTED ? 'bg-red-50 border-red-200 text-red-700' : 'bg-blue-50 border-blue-200 text-blue-700'}`}>{formData.drug_type}</div></FormGroup>
-                        <FormGroup label="Dose"><Input name="dose" value={formData.dose} onChange={handleChange} placeholder="e.g. 1g" /></FormGroup>
-                        <FormGroup label="Frequency"><Input name="frequency" value={formData.frequency} onChange={handleChange} placeholder="e.g. q8h" /></FormGroup>
-                        <FormGroup label="Duration (Days)"><Input name="duration" value={formData.duration} onChange={handleChange} placeholder="e.g. 7" /></FormGroup>
+                        <FormGroup label="Dose"><Input error={!!validationErrors.dose} name="dose" value={formData.dose} onChange={handleChange} placeholder="e.g. 1g" /></FormGroup>
+                        <FormGroup label="Frequency"><Input error={!!validationErrors.frequency} name="frequency" value={formData.frequency} onChange={handleChange} placeholder="e.g. q8h" /></FormGroup>
+                        <FormGroup label="Duration (Days)"><Input error={!!validationErrors.duration} name="duration" value={formData.duration} onChange={handleChange} placeholder="e.g. 7" /></FormGroup>
                     </div>
                     {showMonograph && (
                         <div className="bg-white p-4 rounded-xl border border-blue-100 shadow-sm animate-fade-in max-h-48 overflow-y-auto text-sm text-gray-700" dangerouslySetInnerHTML={{ __html: monographHtml }} />
@@ -582,12 +587,12 @@ const AntimicrobialRequestForm: React.FC<AntimicrobialRequestFormProps> = ({ isO
                 <section className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm space-y-4">
                     <h4 className="text-[11px] font-black text-gray-400 uppercase tracking-widest border-b border-gray-100 pb-2">Accountability</h4>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <FormGroup label="Resident In-Charge"><Input name="resident_name" value={formData.resident_name} onChange={handleChange} placeholder="Ordering physician" /></FormGroup>
-                        <FormGroup label="Clinical Department"><Select name="clinical_dept" value={formData.clinical_dept} onChange={handleChange}><option value="">Select Dept</option>{CLINICAL_DEPARTMENTS.map(d => <option key={d} value={d}>{d}</option>)}</Select></FormGroup>
+                        <FormGroup label="Resident In-Charge"><Input error={!!validationErrors.resident_name} name="resident_name" value={formData.resident_name} onChange={handleChange} placeholder="Ordering physician" /></FormGroup>
+                        <FormGroup label="Clinical Department"><Select error={!!validationErrors.clinical_dept} name="clinical_dept" value={formData.clinical_dept} onChange={handleChange}><option value="">Select Dept</option>{CLINICAL_DEPARTMENTS.map(d => <option key={d} value={d}>{d}</option>)}</Select></FormGroup>
                         {formData.drug_type === DrugType.RESTRICTED && (
                             <>
-                                <FormGroup label="Service Resident"><Input name="service_resident_name" value={formData.service_resident_name} onChange={handleChange} placeholder="IM/Pedia Resident" /></FormGroup>
-                                <FormGroup label="ID Specialist"><Select name="id_specialist" value={formData.id_specialist} onChange={handleChange}><option value="">Select Specialist</option>{(patientMode === 'adult' ? IDS_SPECIALISTS_ADULT : IDS_SPECIALISTS_PEDIATRIC).map(s => <option key={s} value={s}>{s}</option>)}</Select></FormGroup>
+                                <FormGroup label="Service Resident"><Input error={!!validationErrors.service_resident_name} name="service_resident_name" value={formData.service_resident_name} onChange={handleChange} placeholder="IM/Pedia Resident" /></FormGroup>
+                                <FormGroup label="ID Specialist"><Select error={!!validationErrors.id_specialist} name="id_specialist" value={formData.id_specialist} onChange={handleChange}><option value="">Select Specialist</option>{(patientMode === 'adult' ? IDS_SPECIALISTS_ADULT : IDS_SPECIALISTS_PEDIATRIC).map(s => <option key={s} value={s}>{s}</option>)}</Select></FormGroup>
                             </>
                         )}
                     </div>
@@ -615,15 +620,15 @@ const AntimicrobialRequestForm: React.FC<AntimicrobialRequestFormProps> = ({ isO
         {/* Review Overlay - True Modal Overlay */}
         {showReview && (
             <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[100] p-4 backdrop-blur-md animate-fade-in" onClick={() => setShowReview(false)}>
-                <div className="bg-white rounded-3xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden border border-white/20 animate-slide-up" onClick={e => e.stopPropagation()}>
-                    <header className="bg-gray-900 text-white p-6 flex justify-between items-center shrink-0">
-                        <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 bg-green-500 rounded-xl flex items-center justify-center shadow-lg shadow-green-500/30">
+                <div className="bg-white rounded-3xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden border border-white/20 animate-slide-up font-['Inter']" onClick={e => e.stopPropagation()}>
+                    <header className="bg-[#009a3e] text-white p-6 flex justify-between items-center shrink-0">
+                        <div className="flex items-center gap-4">
+                            <div className="bg-white/20 p-2.5 rounded-xl backdrop-blur-md border border-white/10">
                                 <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                             </div>
                             <div>
                                 <h3 className="text-xl font-black uppercase tracking-tight">Final Verification</h3>
-                                <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Confirm clinical data before submission</p>
+                                <p className="text-[10px] text-white/70 font-bold uppercase tracking-widest">Confirm clinical data before submission</p>
                             </div>
                         </div>
                         <button onClick={() => setShowReview(false)} className="text-white/40 hover:text-white transition-colors p-2 hover:bg-white/10 rounded-full"><svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg></button>
@@ -660,9 +665,6 @@ const AntimicrobialRequestForm: React.FC<AntimicrobialRequestFormProps> = ({ isO
 
                             {/* Card 3: Medication (Wide) */}
                             <div className="md:col-span-2 bg-[#f0f7ff] rounded-3xl border border-blue-100 p-8 shadow-sm relative overflow-hidden group">
-                                <div className="absolute top-0 right-0 p-8 opacity-5 pointer-events-none group-hover:opacity-10 transition-opacity">
-                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-48 w-48" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" /></svg>
-                                </div>
                                 <div className="relative z-10 flex flex-col md:flex-row justify-between items-start mb-8 gap-6">
                                     <div>
                                         <p className="text-[10px] font-black text-blue-400 uppercase tracking-widest mb-1">Medication Name</p>

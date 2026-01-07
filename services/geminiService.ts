@@ -1,3 +1,4 @@
+
 import { GoogleGenAI, Type } from "@google/genai";
 
 const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
@@ -20,7 +21,9 @@ interface WeightBasedCheckResult {
 export const checkRenalDosing = async (
   drugName: string,
   egfr: string,
-  renalMonographText: string
+  renalMonographText: string,
+  dose?: string,
+  frequency?: string
 ): Promise<RenalCheckResult | null> => {
   // 1. Safety Checks: If data is missing or eGFR is invalid, return null (do nothing)
   if (!drugName || !egfr || !renalMonographText || egfr.includes('—') || egfr.includes('Pending')) {
@@ -54,6 +57,8 @@ export const checkRenalDosing = async (
       Drug Context:
       - Drug: ${drugName}
       - Renal Dosing Guidelines: "${renalMonographText}"
+      - Prescribed Dose: ${dose || 'Not specified'} (IMPORTANT: This is the TOTAL dose per administration, e.g., '1g' or '500mg'. It is NOT a mg/kg value unless explicitly stated.)
+      - Frequency: ${frequency || 'Not specified'}
       
       Task:
       Compare the patient's eGFR against the provided Renal Dosing Guidelines.

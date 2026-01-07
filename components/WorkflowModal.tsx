@@ -1,3 +1,4 @@
+
 import React from 'react';
 
 interface WorkflowModalProps {
@@ -6,18 +7,18 @@ interface WorkflowModalProps {
 }
 
 const WorkflowStep = ({ number, title, description, statuses, color, icon }: { number: string, title: string, description: string, statuses: { text: string, color: string }[], color: string, icon: React.ReactNode }) => (
-  <div className={`bg-white rounded-lg shadow-md p-5 border-t-4 ${color}`}>
+  <div className={`bg-white rounded-xl shadow-md p-6 border-t-4 transition-all hover:shadow-lg ${color}`}>
     <div className="flex items-start gap-4">
-      <div className="w-8 h-8 rounded-full bg-gray-200 text-gray-700 flex items-center justify-center font-bold flex-shrink-0">{number}</div>
-      <div>
-        <div className="flex items-center gap-2 mb-2">
-          {icon}
-          <h4 className="font-bold text-gray-800">{title}</h4>
+      <div className="w-10 h-10 rounded-full bg-gray-100 text-gray-700 flex items-center justify-center font-black flex-shrink-0 border-2 border-gray-200 shadow-sm">{number}</div>
+      <div className="flex-1">
+        <div className="flex items-center gap-2 mb-3">
+          <div className="text-gray-400">{icon}</div>
+          <h4 className="font-black text-gray-800 uppercase tracking-tight text-sm">{title}</h4>
         </div>
-        <p className="text-sm text-gray-600 mb-4">{description}</p>
+        <p className="text-sm text-gray-600 mb-5 leading-relaxed">{description}</p>
         <div className="flex flex-wrap gap-2">
           {statuses.map(s => (
-            <span key={s.text} className={`text-xs font-bold px-2 py-1 rounded-full ${s.color}`}>{s.text}</span>
+            <span key={s.text} className={`text-[10px] font-black px-2.5 py-1 rounded-full border shadow-sm tracking-widest uppercase ${s.color}`}>{s.text}</span>
           ))}
         </div>
       </div>
@@ -29,96 +30,98 @@ const WorkflowModal: React.FC<WorkflowModalProps> = ({ isOpen, onClose }) => {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4 backdrop-blur-sm animate-fade-in" onClick={onClose}>
-      <div className="bg-gray-50 rounded-xl shadow-2xl w-full max-w-5xl max-h-[90vh] flex flex-col overflow-hidden" onClick={(e) => e.stopPropagation()}>
-        {/* Header */}
-        <header className="flex items-center justify-between gap-4 bg-[#009a3e] text-white px-6 py-4">
-          <div className="flex items-center gap-3">
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" /></svg>
-            <h3 className="text-xl font-bold">Antimicrobial Stewardship Workflow</h3>
+    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[120] p-4 backdrop-blur-md animate-fade-in" onClick={onClose}>
+      <div className="bg-gray-50 rounded-3xl shadow-2xl w-full max-w-6xl max-h-[90vh] flex flex-col overflow-hidden border border-white/20 font-['Inter']" onClick={(e) => e.stopPropagation()}>
+        {/* Enhanced Header - Explicit Inter styling */}
+        <header className="flex items-center justify-between gap-4 bg-[#009a3e] text-white px-8 py-6 shadow-lg shrink-0">
+          <div className="flex items-center gap-4">
+            <div className="bg-white/20 p-2.5 rounded-xl backdrop-blur-md border border-white/10 shadow-inner">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" /></svg>
+            </div>
+            <div className="font-['Inter']">
+                <h3 className="text-2xl font-bold tracking-tight">System Workflow</h3>
+                <p className="text-[10px] font-bold text-white/80 uppercase tracking-[0.15em] mt-0.5">Antimicrobial Request for Monitored and Restricted</p>
+            </div>
           </div>
-          <button onClick={onClose} className="text-white/80 hover:text-white hover:bg-white/20 rounded-full p-2 transition-colors">
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+          <button onClick={onClose} className="text-white/60 hover:text-white hover:bg-white/10 rounded-full p-2 transition-all">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
           </button>
         </header>
 
-        {/* Content */}
-        <div className="p-6 overflow-y-auto space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {/* Improved Workflow Content */}
+        <div className="p-8 overflow-y-auto space-y-8 bg-gray-50/50">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            
             {/* Step 1 */}
             <WorkflowStep 
-              number="1"
-              title="Request Creation"
-              description="A Resident creates a request via the public portal or dashboard. AI guardrails check dosing safety."
-              statuses={[{ text: 'PENDING', color: 'bg-yellow-100 text-yellow-800' }]}
+              number="01"
+              title="Antimicrobial Request"
+              description="The ordering Resident initiates the clinical request. For Restricted drugs, accountability involves the Resident in Charge and the Internal Medicine or Pediatric Medicine resident, who must record their names under the guidance of the assigned Infectious Disease Specialist."
+              statuses={[{ text: 'PENDING', color: 'bg-yellow-50 text-yellow-700 border-yellow-200' }]}
               color="border-yellow-400"
-              icon={<svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-yellow-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" /></svg>}
+              icon={<svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>}
             />
+
             {/* Step 2 */}
             <WorkflowStep 
-              number="2"
+              number="02"
               title="Pharmacist Review"
-              description="The Pharmacist reviews the request. If Monitored, they can approve/disapprove. If Restricted, they must forward to an IDS."
+              description="The Clinical Pharmacist validates the regimen. For MONITORED antimicrobials, the pharmacist may directly Approve or Disapprove. For RESTRICTED antimicrobials, the pharmacist may either Forward the request to the Infectious Disease Specialist or Disapprove the request."
               statuses={[
-                { text: 'APPROVED', color: 'bg-green-100 text-green-800' },
-                { text: 'DISAPPROVED', color: 'bg-red-100 text-red-800' },
-                { text: 'FOR IDS APPROVAL', color: 'bg-indigo-100 text-indigo-800' }
+                { text: 'APPROVED', color: 'bg-green-50 text-green-700 border-green-200' },
+                { text: 'DISAPPROVED', color: 'bg-red-50 text-red-700 border-red-200' },
+                { text: 'FOR IDS APPROVAL', color: 'bg-indigo-50 text-indigo-700 border-indigo-200' }
               ]}
-              color="border-blue-400"
-              icon={<svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>}
+              color="border-blue-500"
+              icon={<svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>}
             />
-             {/* Step 3 */}
+
+            {/* Step 3 */}
             <WorkflowStep 
-              number="3"
+              number="03"
               title="Correction & Resubmission"
-              description="If Disapproved, the Resident can view the reason, edit the request details, and resubmit it for approval."
+              description="For disapproved requests, structured findings are logged to guide corrections. The requesting Resident can log in to their dashboard to view these findings, amend the details, and resubmit for a new review cycle."
               statuses={[
-                { text: 'RESUBMITTED', color: 'bg-blue-100 text-blue-800' },
-                { text: 'PENDING', color: 'bg-yellow-100 text-yellow-800' }
+                { text: 'RESUBMITTED', color: 'bg-blue-50 text-blue-700 border-blue-200' },
+                { text: 'FINDINGS LOGGED', color: 'bg-orange-50 text-orange-700 border-orange-200' }
               ]}
-              color="border-orange-400"
-              icon={<svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-orange-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>}
+              color="border-orange-500"
+              icon={<svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>}
             />
+
             {/* Step 4 */}
             <WorkflowStep 
-              number="4"
-              title="IDS Review"
-              description="An Infectious Disease Specialist reviews forwarded Restricted drug requests and provides a final decision."
+              number="04"
+              title="Infectious Disease Specialist Review"
+              description="The Infectious Disease Specialist performs the final clinical validation for Restricted Antimicrobials. If the Specialist disapproves the request, detailed findings are recorded to assist in optimizing the therapeutic regimen."
               statuses={[
-                { text: 'APPROVED', color: 'bg-green-100 text-green-800' },
-                { text: 'DISAPPROVED', color: 'bg-red-100 text-red-800' }
+                { text: 'FINAL APPROVAL', color: 'bg-green-50 text-green-700 border-green-200' },
+                { text: 'FINAL DISAPPROVAL', color: 'bg-red-50 text-red-700 border-red-200' }
               ]}
-              color="border-purple-400"
-              icon={<svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-purple-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M12 14l9-5-9-5-9 5 9 5z" /><path d="M12 14l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 14l9-5-9-5-9 5 9 5zm0 0v6" /></svg>}
+              color="border-purple-600"
+              icon={<svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" /></svg>}
             />
-             {/* Step 5 */}
-            <WorkflowStep 
-              number="5"
-              title="Final Decision"
-              description="The request is finalized. Approved items proceed to dispensing. Disapproved items are flagged with reasons."
-              statuses={[
-                { text: 'APPROVED', color: 'bg-green-100 text-green-800' },
-                { text: 'DISAPPROVED', color: 'bg-red-100 text-red-800' }
-              ]}
-              color="border-gray-400"
-              icon={<svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" /></svg>}
-            />
-             {/* Step 6 */}
-            <WorkflowStep 
-              number="6"
-              title="Data Analysis"
-              description="AMS Admins and Pharmacists review analytics on drug usage, turnaround times, and interventions."
-              statuses={[
-                { text: 'INSIGHTS', color: 'bg-teal-100 text-teal-800' }
-              ]}
-              color="border-teal-400"
-              icon={<svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-teal-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>}
-            />
+
+            {/* Step 5 */}
+            <div className="md:col-span-2">
+                <WorkflowStep 
+                number="05"
+                title="Continuous Quality Improvement"
+                description="AMS Coordinators review real-time analytics on drug usage, turnaround times, and interventions to ensure compliance with clinical standards and facilitate program optimization."
+                statuses={[
+                    { text: 'DATA ANALYSIS', color: 'bg-teal-50 text-teal-700 border-teal-200' },
+                    { text: 'OUTCOMES', color: 'bg-gray-50 text-gray-700 border-gray-200' }
+                ]}
+                color="border-teal-500"
+                icon={<svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>}
+                />
+            </div>
           </div>
         </div>
-        {/* Footer */}
-        <footer className="text-center text-xs text-gray-600 p-4 border-t border-gray-200 bg-white">
-          Ospital ng Makati Antimicrobial Stewardship System
+        
+        {/* Enhanced Footer */}
+        <footer className="text-center text-[10px] font-bold text-gray-400 uppercase tracking-[0.3em] py-6 border-t border-gray-100 bg-white shrink-0">
+          Ospital ng Makati
         </footer>
       </div>
     </div>
