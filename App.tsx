@@ -1,5 +1,4 @@
 
-
 import React, { useState, useEffect } from 'react';
 import Login from './components/Login';
 import Layout from './components/Layout';
@@ -7,7 +6,6 @@ import PrescriptionCard from './components/PrescriptionCard';
 import PrescriptionTable from './components/PrescriptionTable';
 import StatsChart from './components/StatsChart';
 import PasswordModal from './components/PasswordModal';
-import NewRequestModal from './components/NewRequestModal';
 import DetailModal from './components/DetailModal';
 import DisapproveModal from './components/DisapproveModal';
 import ChartDetailModal from './components/ChartDetailModal';
@@ -17,7 +15,7 @@ import AntimicrobialRequestForm from './components/AntimicrobialRequestForm';
 import AMSAuditForm from './components/AMSAuditForm'; 
 import AMSAuditTable from './components/AMSAuditTable'; 
 import AMSAuditDetailModal from './components/AMSAuditDetailModal'; 
-import AMSMonitoring from './components/AMSMonitoring'; // Import new component
+import AMSMonitoring from './components/AMSMonitoring'; 
 import { User, UserRole, Prescription, PrescriptionStatus, ActionType, DrugType, AMSAudit } from './types';
 import { 
   fetchPrescriptions, 
@@ -26,39 +24,6 @@ import {
   fetchAudits 
 } from './services/dataService';
 import { supabase } from './services/supabaseClient';
-
-const FilterControls = ({ selectedMonth, onMonthChange, selectedYear, onYearChange }: any) => {
-  const months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
-  const currentYear = new Date().getFullYear();
-  const years = Array.from({length: 5}, (_, i) => currentYear - i);
-
-  return (
-    <div className="flex flex-col sm:flex-row gap-4 items-center">
-      <div className="flex items-center gap-2">
-        <label className="text-xs font-semibold text-gray-500 uppercase">Month:</label>
-        <select 
-          value={selectedMonth} 
-          onChange={(e) => onMonthChange(parseInt(e.target.value))} 
-          className="bg-white border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-800 focus:ring-2 focus:ring-green-200 focus:border-green-500 outline-none shadow-sm transition-colors hover:border-gray-400 [color-scheme:light]"
-        >
-          <option value={-1}>All Months</option>
-          {months.map((m, i) => <option key={i} value={i}>{m}</option>)}
-        </select>
-      </div>
-      <div className="flex items-center gap-2">
-        <label className="text-xs font-semibold text-gray-500 uppercase">Year:</label>
-        <select 
-          value={selectedYear} 
-          onChange={(e) => onYearChange(parseInt(e.target.value))} 
-          className="bg-white border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-800 focus:ring-2 focus:ring-green-200 focus:border-green-500 outline-none shadow-sm transition-colors hover:border-gray-400 [color-scheme:light]"
-        >
-          <option value={0}>All Years</option>
-          {years.map((y) => <option key={y} value={y}>{y}</option>)}
-        </select>
-      </div>
-    </div>
-  );
-}
 
 const tabsConfig: Record<UserRole, string[]> = {
   [UserRole.PHARMACIST]: ['Pending', 'History', 'AMS Monitoring', 'Data Analysis'], 
@@ -86,7 +51,7 @@ const TabIcon = ({ tabName }: { tabName: string }) => {
       path = <path fillRule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clipRule="evenodd" />;
       break;
     case 'Disapproved':
-        path = <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+        path = <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.415L11 9.586V6z" clipRule="evenodd" />
         break;
     default:
       path = <path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />;
@@ -109,7 +74,6 @@ function App() {
   
   // Action state
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
-  const [isNewRequestModalOpen, setIsNewRequestModalOpen] = useState(false);
   const [isDisapproveModalOpen, setIsDisapproveModalOpen] = useState(false);
   const [selectedItemForView, setSelectedItemForView] = useState<Prescription | null>(null);
   const [pendingAction, setPendingAction] = useState<{id: number, type: ActionType, payload?: any} | null>(null);
@@ -129,8 +93,8 @@ function App() {
   // Filters
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
-  const [historyStatusFilter, setHistoryStatusFilter] = useState<string>('Approved'); // Default for History tab
-  const [drugTypeFilter, setDrugTypeFilter] = useState<string>('All'); // Filter for Admin Antimicrobials tab
+  const [historyStatusFilter, setHistoryStatusFilter] = useState<string>('Approved'); 
+  const [drugTypeFilter, setDrugTypeFilter] = useState<string>('All'); 
 
   useEffect(() => {
     if (user) {
@@ -218,13 +182,11 @@ function App() {
   };
 
   const handleActionClick = (id: number, type: ActionType, payload?: any) => {
-    // If payload contains findings, it comes from DetailModal and we execute immediately
     if (payload?.findings && (type === ActionType.DISAPPROVE || type === ActionType.APPROVE || type === ActionType.SAVE_FINDINGS)) {
         executeAction(id, type, { findings: payload.findings });
         return;
     }
 
-    // Special handling for Residents Editing
     if (type === ActionType.RESEND && payload?.isEditing) {
         const itemToEdit = data.find(i => i.id === id);
         if (itemToEdit) {
@@ -237,7 +199,7 @@ function App() {
     switch (type) {
       case ActionType.APPROVE:
       case ActionType.REVERSE_TO_APPROVE:
-      case ActionType.RESEND: // Direct resend without edit
+      case ActionType.RESEND: 
         executeAction(id, type);
         break;
       
@@ -342,11 +304,10 @@ function App() {
           break;
         case ActionType.RESEND:
           statusToUpdate = PrescriptionStatus.PENDING;
-          // Clear approval/disapproval fields
           updates.ids_approved_at = null;
           updates.ids_disapproved_at = null;
           updates.dispensed_date = null;
-          updates.disapproved_reason = null; // Clear previous rejection reason
+          updates.disapproved_reason = null; 
           break;
         case ActionType.SAVE_FINDINGS:
           break;
@@ -367,40 +328,24 @@ function App() {
     }
   };
 
-  const handleNewRequestSubmit = async (formData: any) => {
-    if (!user) return; 
-    setIsSubmitting(true);
-    try {
-      await createPrescription({ ...formData, status: PrescriptionStatus.PENDING, requested_by: user.name });
-      setIsNewRequestModalOpen(false);
-      loadData();
-    } catch (err) {
-      console.error("Failed to create request", err);
-      alert("Failed to create request. Please check RLS policies in Supabase.");
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  // Handles both Create (from Login or Resident Edit) and Update
-  const handleFormSubmissionFromLogin = async (formData: any) => {
+  const handleFormSubmission = async (formData: any) => {
     setIsSubmitting(true);
     try {
       if (formData.id) {
-          // This is an update/resend from the Resident module
+          // Update Mode
           await updatePrescriptionStatus(formData.id, PrescriptionStatus.PENDING, formData);
           alert("Request Updated and Resent successfully!");
       } else {
-          // New submission
-          await createPrescription({ ...formData }); 
+          // Create Mode
+          await createPrescription(formData); 
           alert("Antimicrobial Request submitted successfully!");
       }
       
       setIsAntimicrobialRequestFormOpen(false);
-      setRequestToEdit(null); // Clear edit state
-      loadData(); // Refresh data if logged in
+      setRequestToEdit(null); 
+      loadData(); 
     } catch (err) {
-      console.error("Failed to create request from login form", err);
+      console.error("Submission failed", err);
       const msg = err instanceof Error ? err.message : JSON.stringify(err);
       alert(`Failed to submit request: ${msg}`);
     } finally {
@@ -413,14 +358,12 @@ function App() {
   };
 
   const getFilteredDataForCurrentView = () => {
-    const isIdsUnfilteredView = user?.role === UserRole.IDS && (activeTab === 'History');
     const isPendingView = activeTab === 'Pending';
     const isAmsAdminView = user?.role === UserRole.AMS_ADMIN;
     const isResidentView = user?.role === UserRole.RESIDENT;
     
     let items = data;
 
-    // Apply date filtering for everyone EXCEPT Pending tab or specific admin views
     if (isResidentView || (!isPendingView && !(isAmsAdminView && (activeTab === 'Data Analysis' || activeTab === 'AMS Audit')))) {
       items = items.filter(item => {
         const itemDate = item.req_date ? new Date(item.req_date) : new Date(item.created_at || Date.now());
@@ -435,7 +378,6 @@ function App() {
         case 'Pending': 
           return items.filter(i => statusMatches(i.status, PrescriptionStatus.PENDING));
         case 'History': 
-          // History tab logic
           if (historyStatusFilter === 'Approved') {
              return items.filter(i => statusMatches(i.status, PrescriptionStatus.APPROVED) && i.drug_type === DrugType.MONITORED);
           } else if (historyStatusFilter === 'Disapproved') {
@@ -456,7 +398,6 @@ function App() {
            } else if (historyStatusFilter === 'Disapproved') {
              return items.filter(i => statusMatches(i.status, PrescriptionStatus.DISAPPROVED) && i.drug_type === DrugType.RESTRICTED);
            }
-           // IDS doesn't see 'For IDS Approval' in history, only in Pending
            return [];
       }
     }
@@ -483,9 +424,7 @@ function App() {
         (user?.role !== UserRole.AMS_ADMIN && activeTab !== 'Pending' && activeTab !== 'Data Analysis' && activeTab !== 'AMS Monitoring') || 
         (user?.role === UserRole.AMS_ADMIN && (activeTab !== 'Data Analysis' && activeTab !== 'AMS Audit'));
 
-    if (!showFilters) {
-      return null;
-    }
+    if (!showFilters) return null;
 
     return (
       <div className="flex flex-col sm:flex-row gap-4 items-center justify-between mb-6 bg-white p-4 rounded-xl shadow-md border border-gray-200">
@@ -494,7 +433,6 @@ function App() {
             <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293.707L3.293 7.293A1 1 0 013 6.586V4z" /></svg>
             Filters
             </h3>
-            {/* History Status Dropdown */}
             {activeTab === 'History' && (
                 <div className="flex items-center gap-2 border-l pl-4 border-gray-200">
                     <label className="text-xs font-semibold text-gray-500 uppercase">Status:</label>
@@ -510,19 +448,22 @@ function App() {
                 </div>
             )}
         </div>
-        <FilterControls 
-          selectedMonth={selectedMonth} 
-          onMonthChange={setSelectedMonth}
-          selectedYear={selectedYear}
-          onYearChange={setSelectedYear}
-        />
+        <div className="flex flex-col sm:flex-row gap-4 items-center">
+            <div className="flex items-center gap-2">
+                <label className="text-xs font-semibold text-gray-500 uppercase">Month:</label>
+                <select value={selectedMonth} onChange={(e) => setSelectedMonth(parseInt(e.target.value))} className="bg-white border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-800 focus:ring-2 focus:ring-green-200 focus:border-green-500 outline-none shadow-sm [color-scheme:light]"><option value={-1}>All Months</option>{["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"].map((m, i) => <option key={i} value={i}>{m}</option>)}</select>
+            </div>
+            <div className="flex items-center gap-2">
+                <label className="text-xs font-semibold text-gray-500 uppercase">Year:</label>
+                <select value={selectedYear} onChange={(e) => setSelectedYear(parseInt(e.target.value))} className="bg-white border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-800 focus:ring-2 focus:ring-green-200 focus:border-green-500 outline-none shadow-sm [color-scheme:light]"><option value={0}>All Years</option>{Array.from({length: 5}, (_, i) => new Date().getFullYear() - i).map((y) => <option key={y} value={y}>{y}</option>)}</select>
+            </div>
+        </div>
       </div>
     );
   };
 
   const renderContent = () => {
     if (dbError) {
-      const isColumnMissing = dbError.includes('column') && dbError.includes('does not exist');
       return (
         <div className="p-12 bg-white rounded-lg shadow-md border-l-4 border-red-500 my-8">
           <h3 className="text-lg font-bold text-gray-800 mb-2">Database Error</h3>
@@ -563,10 +504,7 @@ function App() {
         );
     }
 
-    // New Monitoring Tab Logic
-    if (activeTab === 'AMS Monitoring') {
-        return <AMSMonitoring user={user} />;
-    }
+    if (activeTab === 'AMS Monitoring') return <AMSMonitoring user={user} />;
 
     const viewData = getFilteredDataForCurrentView();
 
@@ -581,133 +519,64 @@ function App() {
     
     if (loading) return <div className="text-center p-20 text-gray-500">Loading records...</div>;
 
-    // Pharmacist Pending OR Resident Disapproved Cards View
     if (activeTab === 'Pending' || (user?.role === UserRole.RESIDENT && activeTab === 'Disapproved')) {
-        if (user?.role === UserRole.PHARMACIST && activeTab === 'Pending') {
-            return (
-              <div>
-                 <div className="flex flex-col md:flex-row justify-between items-center gap-4 bg-white p-4 rounded-xl shadow-sm border border-gray-200 mb-6">
-                    <div>
-                        <h2 className="text-xl font-bold text-gray-800">Pending Requests</h2>
-                        <p className="text-sm text-gray-500">Review new antimicrobial requests. Total pending: {viewData.length}</p>
-                    </div>
+        const titleMap: any = { PHARMACIST: 'Pending Requests', IDS: 'Pending for IDS Approval', RESIDENT: 'Disapproved Requests' };
+        const subMap: any = { PHARMACIST: 'Review new antimicrobial requests.', IDS: 'Review restricted antimicrobial requests.', RESIDENT: 'Review, edit, and resubmit rejected requests.' };
+        return (
+          <div>
+             <div className="flex flex-col md:flex-row justify-between items-center gap-4 bg-white p-4 rounded-xl shadow-sm border border-gray-200 mb-6">
+                <div>
+                    <h2 className="text-xl font-bold text-gray-800">{titleMap[user!.role]}</h2>
+                    <p className="text-sm text-gray-500">{subMap[user!.role]} Total: {viewData.length}</p>
+                </div>
+                {user?.role === UserRole.PHARMACIST && (
                     <button 
-                        onClick={() => setIsNewRequestModalOpen(true)}
+                        onClick={() => { setRequestToEdit(null); setIsAntimicrobialRequestFormOpen(true); }}
                         className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium shadow-sm flex items-center gap-2 transition-colors"
                     >
                         <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" /></svg>
                         New Request
                     </button>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {viewData.length === 0 ? <p className="col-span-full text-center py-10 bg-white rounded-lg">No items found.</p> : viewData.map(item => (
-                    <PrescriptionCard key={item.id} item={item} role={user!.role} onAction={handleActionClick} onView={handleViewDetails} />
-                  ))}
-                </div>
-              </div>
-            );
-        } else if (user?.role === UserRole.IDS && activeTab === 'Pending') {
-            return (
-                <div>
-                    <div className="flex flex-col md:flex-row justify-between items-center gap-4 bg-white p-4 rounded-xl shadow-sm border border-gray-200 mb-6">
-                        <div>
-                            <h2 className="text-xl font-bold text-gray-800">Pending for IDS Approval</h2>
-                            <p className="text-sm text-gray-500">Review restricted antimicrobial requests. Total pending: {viewData.length}</p>
-                        </div>
-                    </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                      {viewData.length === 0 ? <p className="col-span-full text-center py-10 bg-white rounded-lg">No items found.</p> : viewData.map(item => (
-                        <PrescriptionCard key={item.id} item={item} role={user!.role} onAction={handleActionClick} onView={handleViewDetails} />
-                      ))}
-                    </div>
-                </div>
-            );
-        } else if (user?.role === UserRole.RESIDENT && activeTab === 'Disapproved') {
-            return (
-                <div>
-                    <div className="flex flex-col md:flex-row justify-between items-center gap-4 bg-white p-4 rounded-xl shadow-sm border border-gray-200 mb-6">
-                        <div>
-                            <h2 className="text-xl font-bold text-gray-800">Disapproved Requests</h2>
-                            <p className="text-sm text-gray-500">Review, edit, and resubmit rejected requests. Total: {viewData.length}</p>
-                        </div>
-                    </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                      {viewData.length === 0 ? <p className="col-span-full text-center py-10 bg-white rounded-lg">No items found.</p> : viewData.map(item => (
-                        <PrescriptionCard key={item.id} item={item} role={user!.role} onAction={handleActionClick} onView={handleViewDetails} />
-                      ))}
-                    </div>
-                </div>
-            );
-        }
+                )}
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {viewData.length === 0 ? <p className="col-span-full text-center py-10 bg-white rounded-lg">No items found.</p> : viewData.map(item => (
+                <PrescriptionCard key={item.id} item={item} role={user!.role} onAction={handleActionClick} onView={handleViewDetails} />
+              ))}
+            </div>
+          </div>
+        );
     }
 
     switch(activeTab) {
       case 'History':
-        // Determine status type for table coloring logic based on the filter
         let tableStatusType: PrescriptionStatus = PrescriptionStatus.APPROVED;
         if (historyStatusFilter === 'Disapproved') tableStatusType = PrescriptionStatus.DISAPPROVED;
         if (historyStatusFilter === 'For IDS Approval') tableStatusType = PrescriptionStatus.FOR_IDS_APPROVAL;
-        
         return <PrescriptionTable items={viewData} onAction={handleActionClick} onView={handleViewDetails} statusType={tableStatusType} />;
-
       case 'Data Analysis':
-        return <StatsChart 
-                  data={data} 
-                  allData={data}
-                  auditData={auditData}
-                  role={user?.role}
-                  selectedMonth={selectedMonth}
-                  onMonthChange={setSelectedMonth}
-                  selectedYear={selectedYear}
-                  onYearChange={setSelectedYear} 
-                />;
-      
+        return <StatsChart data={data} allData={data} auditData={auditData} role={user?.role} selectedMonth={selectedMonth} onMonthChange={setSelectedMonth} selectedYear={selectedYear} onYearChange={setSelectedYear} />;
       case 'Antimicrobials':
-         // Filter 'Antimicrobials' tab data based on drugTypeFilter
          let displayData = viewData;
-         if (activeTab === 'Antimicrobials') {
-             if (drugTypeFilter === 'Monitored') {
-                 displayData = viewData.filter(i => i.drug_type === DrugType.MONITORED);
-             } else if (drugTypeFilter === 'Restricted') {
-                 displayData = viewData.filter(i => i.drug_type === DrugType.RESTRICTED);
-             }
-         }
-
+         if (drugTypeFilter === 'Monitored') displayData = viewData.filter(i => i.drug_type === DrugType.MONITORED);
+         else if (drugTypeFilter === 'Restricted') displayData = viewData.filter(i => i.drug_type === DrugType.RESTRICTED);
          return (
            <div className="space-y-4">
              <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
                <h3 className="text-lg font-bold text-gray-700">{activeTab} Requests</h3>
-               
                <div className="flex items-center gap-3">
-                   {activeTab === 'Antimicrobials' && (
-                       <div className="flex items-center gap-2">
-                           <span className="text-xs font-semibold text-gray-500 uppercase">Drug Type:</span>
-                           <select 
-                               value={drugTypeFilter} 
-                               onChange={(e) => setDrugTypeFilter(e.target.value)} 
-                               className="bg-white border border-gray-300 rounded-lg px-3 py-1.5 text-sm text-gray-800 focus:ring-2 focus:ring-green-200 focus:border-green-500 outline-none [color-scheme:light]"
-                           >
-                               <option value="All">All</option>
-                               <option value="Monitored">Monitored</option>
-                               <option value="Restricted">Restricted</option>
-                           </select>
-                       </div>
-                   )}
+                   <div className="flex items-center gap-2">
+                       <span className="text-xs font-semibold text-gray-500 uppercase">Drug Type:</span>
+                       <select value={drugTypeFilter} onChange={(e) => setDrugTypeFilter(e.target.value)} className="bg-white border border-gray-300 rounded-lg px-3 py-1.5 text-sm text-gray-800 focus:ring-2 focus:ring-green-200 focus:border-green-500 outline-none [color-scheme:light]"><option value="All">All</option><option value="Monitored">Monitored</option><option value="Restricted">Restricted</option></select>
+                   </div>
                    <span className="text-sm text-gray-500 bg-gray-100 px-3 py-1 rounded-full">{displayData.length} records</span>
                </div>
              </div>
              <PrescriptionTable items={displayData} onAction={handleActionClick} onView={handleViewDetails} statusType={'ALL_VIEW'} />
            </div>
          );
-
-      default:
-        return null;
+      default: return null;
     }
-  };
-  
-  const handleTabChange = (tab: string) => {
-    setActiveTab(tab); 
-    if(tab === 'History') setHistoryStatusFilter('Approved'); 
   };
   
   const currentTabs = user ? tabsConfig[user.role] : tabsConfig[UserRole.PHARMACIST]; 
@@ -716,93 +585,23 @@ function App() {
     <>
       <UserManualModal isOpen={isUserManualOpen} onClose={() => setIsUserManualOpen(false)} />
       <WorkflowModal isOpen={isWorkflowModalOpen} onClose={() => setIsWorkflowModalOpen(false)} />
-      
-      <AntimicrobialRequestForm 
-        isOpen={isAntimicrobialRequestFormOpen}
-        onClose={() => {
-            setIsAntimicrobialRequestFormOpen(false);
-            setRequestToEdit(null); // Clear editing state on close
-        }}
-        onSubmit={handleFormSubmissionFromLogin}
-        loading={isSubmitting}
-        initialData={requestToEdit} // Pass editing data
-      />
-      
-      {/* Audit Form */}
-      <AMSAuditForm 
-        isOpen={isAMSAuditFormOpen}
-        initialData={selectedAuditToEdit}
-        onClose={() => {
-            setIsAMSAuditFormOpen(false);
-            setSelectedAuditToEdit(null); 
-            if (user?.role === UserRole.AMS_ADMIN) loadAudits();
-        }}
-      />
-
-      {/* Audit Detail Modal */}
-      <AMSAuditDetailModal
-        isOpen={!!selectedAuditForView}
-        onClose={() => setSelectedAuditForView(null)}
-        audit={selectedAuditForView}
-        onSave={loadAudits} 
-      />
+      <AntimicrobialRequestForm isOpen={isAntimicrobialRequestFormOpen} onClose={() => { setIsAntimicrobialRequestFormOpen(false); setRequestToEdit(null); }} onSubmit={handleFormSubmission} loading={isSubmitting} initialData={requestToEdit} />
+      <AMSAuditForm isOpen={isAMSAuditFormOpen} initialData={selectedAuditToEdit} onClose={() => { setIsAMSAuditFormOpen(false); setSelectedAuditToEdit(null); if (user?.role === UserRole.AMS_ADMIN) loadAudits(); }} />
+      <AMSAuditDetailModal isOpen={!!selectedAuditForView} onClose={() => setSelectedAuditForView(null)} audit={selectedAuditForView} onSave={loadAudits} />
 
       {!user ? (
-        <Login 
-          onLogin={handleLogin} 
-          onOpenManual={() => setIsUserManualOpen(true)} 
-          onOpenWorkflow={() => setIsWorkflowModalOpen(true)}
-          onOpenAntimicrobialRequestForm={() => {
-              setRequestToEdit(null);
-              setIsAntimicrobialRequestFormOpen(true);
-          }}
-          onOpenAuditForm={() => {
-              setSelectedAuditToEdit(null);
-              setIsAMSAuditFormOpen(true);
-          }}
-        />
+        <Login onLogin={handleLogin} onOpenManual={() => setIsUserManualOpen(true)} onOpenWorkflow={() => setIsWorkflowModalOpen(true)} onOpenAntimicrobialRequestForm={() => { setRequestToEdit(null); setIsAntimicrobialRequestFormOpen(true); }} onOpenAuditForm={() => { setSelectedAuditToEdit(null); setIsAMSAuditFormOpen(true); }} />
       ) : (
         <>
-          <Layout 
-            user={user} 
-            onLogout={handleLogout}
-            tabs={currentTabs}
-            activeTab={activeTab}
-            onTabChange={handleTabChange}
-          >
-            <PasswordModal 
-              isOpen={isPasswordModalOpen} 
-              onClose={() => setIsPasswordModalOpen(false)} 
-              onConfirm={handleConfirmPassword} 
-              expectedPassword={getCurrentUserPassword(user)} // Pass user-specific password
-            />
-            <NewRequestModal isOpen={isNewRequestModalOpen} onClose={() => setIsNewRequestModalOpen(false)} onSubmit={handleNewRequestSubmit} loading={isSubmitting} />
+          <Layout user={user} onLogout={handleLogout} tabs={currentTabs} activeTab={activeTab} onTabChange={(tab) => { setActiveTab(tab); if(tab === 'History') setHistoryStatusFilter('Approved'); }}>
+            <PasswordModal isOpen={isPasswordModalOpen} onClose={() => setIsPasswordModalOpen(false)} onConfirm={handleConfirmPassword} expectedPassword={getCurrentUserPassword(user)} />
             <DisapproveModal isOpen={isDisapproveModalOpen} onClose={() => setIsDisapproveModalOpen(false)} onSubmit={handleDisapproveSubmit} loading={isSubmitting} />
-            <DetailModal isOpen={!!selectedItemForView} onClose={() => setSelectedItemForView(null)} item={selectedItemForView} role={user.role} onAction={handleActionClick} />
-            
-            <div className="pb-20 md:pb-0"> {/* Padding for mobile bottom nav */}
-              {FilterHeader()}
-              {renderContent()}
-            </div>
+            <DetailModal isOpen={!!selectedItemForView} onClose={() => setSelectedItemForView(null)} item={selectedItemForView} role={user.role} userName={user.name} onAction={handleActionClick} />
+            <div className="pb-20 md:pb-0">{FilterHeader()}{renderContent()}</div>
           </Layout>
-          
-          {/* MOBILE-ONLY Navigation Bar */}
           <div className="fixed bottom-0 left-0 right-0 bg-[#009a3e] p-2 z-40 md:hidden flex overflow-x-auto gap-2 justify-around shadow-[0_-2px_10px_rgba(0,0,0,0.1)]">
             {currentTabs.map((tab) => (
-              <button 
-                key={tab} 
-                onClick={() => handleTabChange(tab)} 
-                className={`whitespace-nowrap px-2 py-1.5 font-medium text-xs transition-all duration-200 rounded-lg flex flex-col items-center flex-1
-                  ${activeTab === tab 
-                    ? 'bg-white text-[#009a3e] shadow-md' 
-                    : 'text-white/80 hover:bg-white/20 hover:text-white'
-                  }`}
-              >
-                <span className="mb-0.5">
-                  <TabIcon tabName={tab} />
-                </span>
-                {tab}
-              </button>
+              <button key={tab} onClick={() => { setActiveTab(tab); if(tab === 'History') setHistoryStatusFilter('Approved'); }} className={`whitespace-nowrap px-2 py-1.5 font-medium text-xs transition-all duration-200 rounded-lg flex flex-col items-center flex-1 ${activeTab === tab ? 'bg-white text-[#009a3e] shadow-md' : 'text-white/80 hover:bg-white/20 hover:text-white'}`}><span className="mb-0.5"><TabIcon tabName={tab} /></span>{tab}</button>
             ))}
           </div>
         </>

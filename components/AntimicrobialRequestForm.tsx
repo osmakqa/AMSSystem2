@@ -1,21 +1,19 @@
 
-
 import React, { useState, useEffect, useMemo } from 'react';
-import { DrugType, PrescriptionStatus } from '../types'; // Removed Prescription type from imports as we use 'any' for form data or we can import it
-import { IDS_SPECIALISTS_ADULT, IDS_SPECIALISTS_PEDIATRIC, WARDS } from '../constants';
+import { DrugType, PrescriptionStatus } from '../types';
+import { IDS_SPECIALISTS_ADULT, IDS_SPECIALISTS_PEDIATRIC, WARDS, LOGO_URL } from '../constants';
 import { ADULT_MONOGRAPHS } from '../data/adultMonographs';
 import { PEDIATRIC_MONOGRAPHS } from '../data/pediatricMonographs';
-import { checkRenalDosing, verifyWeightBasedDosing, verifyPediatricDosing } from '../services/geminiService'; // Import AI
+import { checkRenalDosing } from '../services/geminiService';
 
 interface AntimicrobialRequestFormProps {
   isOpen: boolean;
   onClose: () => void;
   onSubmit: (data: any) => void;
   loading: boolean;
-  initialData?: any; // New prop for editing
+  initialData?: any;
 }
 
-// ... existing constants (CLINICAL_DEPARTMENTS) ...
 const CLINICAL_DEPARTMENTS = [
   "Internal Medicine",
   "Surgery",
@@ -31,13 +29,13 @@ const CLINICAL_DEPARTMENTS = [
 const calcCkdEpi2021 = (age: number, sex: string, scr: number) => {
   const k = sex === "Female" ? 0.7 : 0.9;
   const alpha = sex === "Female" ? -0.241 : -0.302;
-  const minScr = Math.min(scr/k,1);
-  const maxScr = Math.max(scr/k,1);
+  const minScr = Math.min(scr / k, 1);
+  const maxScr = Math.max(scr / k, 1);
 
   return 142 *
-    Math.pow(minScr,alpha) *
-    Math.pow(maxScr,-1.2) *
-    Math.pow(0.9938,age) *
+    Math.pow(minScr, alpha) *
+    Math.pow(maxScr, -1.2) *
+    Math.pow(0.9938, age) *
     (sex === "Female" ? 1.012 : 1);
 };
 
@@ -50,10 +48,9 @@ const getTodayDate = () => {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 };
 
-// ... existing sub-components (FormGroup, Input, Select, Textarea) ...
 const FormGroup = ({ label, children, className = '' }: { label: string, children: React.ReactNode, className?: string }) => (
   <div className={`flex flex-col gap-1 ${className}`}>
-    <label className="text-xs font-semibold text-gray-700">{label}</label>
+    <label className="text-[10px] font-bold text-gray-500 uppercase tracking-tight">{label}</label>
     {children}
   </div>
 );
@@ -61,25 +58,24 @@ const FormGroup = ({ label, children, className = '' }: { label: string, childre
 const Input = (props: React.InputHTMLAttributes<HTMLInputElement>) => (
   <input
     {...props}
-    className={`w-full rounded-md border border-gray-300 px-2 py-1.5 text-sm outline-none focus:border-green-500 focus:ring-1 focus:ring-green-500 bg-white text-gray-900 [color-scheme:light] ${props.className || ''}`}
+    className={`w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-green-500 focus:ring-1 focus:ring-green-500 bg-white text-gray-900 [color-scheme:light] ${props.className || ''}`}
   />
 );
 
 const Select = (props: React.SelectHTMLAttributes<HTMLSelectElement>) => (
   <select
     {...props}
-    className={`w-full rounded-md border border-gray-300 px-2 py-1.5 text-sm outline-none focus:border-green-500 focus:ring-1 focus:ring-green-500 bg-white text-gray-900 [color-scheme:light] ${props.className || ''}`}
+    className={`w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-green-500 focus:ring-1 focus:ring-green-500 bg-white text-gray-900 [color-scheme:light] ${props.className || ''}`}
   />
 );
 
 const Textarea = (props: React.TextareaHTMLAttributes<HTMLTextAreaElement>) => (
   <textarea
     {...props}
-    className={`w-full rounded-md border border-gray-300 px-2 py-1.5 text-sm outline-none focus:border-green-500 focus:ring-1 focus:ring-green-500 bg-white text-gray-900 ${props.className || ''}`}
+    className={`w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-green-500 focus:ring-1 focus:ring-green-500 bg-white text-gray-900 ${props.className || ''}`}
   />
 );
 
-// ... existing dynamic row components (PrevAbxRow, OrganismBlock) ...
 interface PrevAbxRowProps {
   id: number;
   value: { drug: string; frequency: string; duration: string };
@@ -92,7 +88,7 @@ const PrevAbxRow: React.FC<PrevAbxRowProps> = ({ id, value, onChange, onRemove }
     <Input type="text" placeholder="Drug name" value={value.drug} onChange={(e) => onChange(id, 'drug', e.target.value)} />
     <Input type="text" placeholder="Frequency" value={value.frequency} onChange={(e) => onChange(id, 'frequency', e.target.value)} />
     <Input type="text" placeholder="Duration" value={value.duration} onChange={(e) => onChange(id, 'duration', e.target.value)} />
-    <button type="button" onClick={() => onRemove(id)} className="text-red-500 hover:text-red-700 p-1 rounded-full"><svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg></button>
+    <button type="button" onClick={() => onRemove(id)} className="text-red-400 hover:text-red-600 p-1.5 rounded-full hover:bg-red-50 transition-colors"><svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg></button>
   </div>
 );
 
@@ -125,134 +121,137 @@ const OrganismBlock: React.FC<OrganismBlockProps> = ({ id, value, onChange, onRe
   };
 
   return (
-    <div className="rounded-lg border border-dashed border-gray-300 p-3 mb-2 bg-gray-50">
-      <div className="flex justify-between items-center mb-2">
-        <span className="font-semibold text-gray-700">Organism Details</span>
-        <button type="button" onClick={() => onRemove(id)} className="text-red-500 hover:text-red-700 p-1 rounded-full"><svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg></button>
+    <div className="rounded-xl border border-dashed border-gray-300 p-4 mb-3 bg-white shadow-sm">
+      <div className="flex justify-between items-center mb-3">
+        <span className="text-xs font-bold text-gray-700 uppercase tracking-wider">Organism Details</span>
+        <button type="button" onClick={() => onRemove(id)} className="text-red-400 hover:text-red-600 p-1 rounded-full"><svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg></button>
       </div>
-      <FormGroup label="Name"><Input type="text" placeholder="e.g., E. coli" value={value.name} onChange={(e) => onChange(id, 'name', e.target.value)} /></FormGroup>
-      <FormGroup label="Susceptibilities"><div className="space-y-1 mt-2">
-        {value.susceptibilities.map((susc, suscIndex) => (
-          <div key={suscIndex} className="grid grid-cols-4 gap-2 items-center text-sm">
-            <Input type="text" placeholder="Drug" value={susc.drug} onChange={(e) => updateSusceptibility(suscIndex, 'drug', e.target.value)} className="col-span-2" />
-            <Select value={susc.result} onChange={(e) => updateSusceptibility(suscIndex, 'result', e.target.value)}>
-              <option value="">N/A</option>
-              <option value="S">S</option>
-              <option value="I">I</option>
-              <option value="R">R</option>
-            </Select>
-            <button type="button" onClick={() => removeSusceptibility(suscIndex)} className="text-red-400 hover:text-red-600 p-1 rounded-full"><svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg></button>
-          </div>
-        ))}
-        <button type="button" onClick={addSusceptibility} className="flex items-center text-green-600 hover:text-green-800 text-sm font-medium gap-1 mt-2"><svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg> Add Antibiotic</button>
-      </div></FormGroup>
+      <FormGroup label="Organism Name"><Input type="text" placeholder="e.g., E. coli" value={value.name} onChange={(e) => onChange(id, 'name', e.target.value)} /></FormGroup>
+      <FormGroup label="Susceptibilities" className="mt-4">
+        <div className="space-y-2">
+          {value.susceptibilities.map((susc, suscIndex) => (
+            <div key={suscIndex} className="grid grid-cols-4 gap-2 items-center text-sm">
+              <Input type="text" placeholder="Drug" value={susc.drug} onChange={(e) => updateSusceptibility(suscIndex, 'drug', e.target.value)} className="col-span-2" />
+              <Select value={susc.result} onChange={(e) => updateSusceptibility(suscIndex, 'result', e.target.value)}>
+                <option value="">N/A</option>
+                <option value="S">S</option>
+                <option value="I">I</option>
+                <option value="R">R</option>
+              </Select>
+              <button type="button" onClick={() => removeSusceptibility(suscIndex)} className="text-red-400 hover:text-red-600 p-1.5 rounded-full"><svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg></button>
+            </div>
+          ))}
+          <button type="button" onClick={addSusceptibility} className="flex items-center text-green-600 hover:text-green-800 text-xs font-bold gap-1 mt-2">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg> Add Antibiotic
+          </button>
+        </div>
+      </FormGroup>
     </div>
   );
 };
-
 
 const AntimicrobialRequestForm: React.FC<AntimicrobialRequestFormProps> = ({ isOpen, onClose, onSubmit, loading, initialData }) => {
   const [patientMode, setPatientMode] = useState<'adult' | 'pediatric'>('adult');
   const [formData, setFormData] = useState({
     req_date: getTodayDate(),
     patient_name: '', hospital_number: '', age: '', sex: '', weight_kg: '', height_cm: '', ward: '',
-    mode: 'adult' as 'adult' | 'pediatric', 
+    mode: 'adult' as 'adult' | 'pediatric',
     diagnosis: '', sgpt: '', scr_mgdl: '', egfr_text: '',
     antimicrobial: '', drug_type: DrugType.MONITORED as DrugType, dose: '', frequency: '', duration: '',
-    indication: '', basis_indication: '', selectedIndicationType: '' as 'Empiric'|'Prophylactic'|'Therapeutic'|'',
+    indication: '', basis_indication: '', selectedIndicationType: '' as 'Empiric' | 'Prophylactic' | 'Therapeutic' | '',
     specimen: '',
     resident_name: '', clinical_dept: '', service_resident_name: '', id_specialist: '',
   });
+
   const [prevAbxRows, setPrevAbxRows] = useState<{ id: number; drug: string; frequency: string; duration: string }[]>([{ id: 0, drug: '', frequency: '', duration: '' }]);
   const [organismBlocks, setOrganismBlocks] = useState<{ id: number; name: string; susceptibilities: OrganismSusceptibility[] }[]>([{ id: 0, name: '', susceptibilities: [{ drug: '', result: '' }] }]);
   const [scrNotAvailable, setScrNotAvailable] = useState(false);
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
   const [monographHtml, setMonographHtml] = useState<string>('<p>Select an antimicrobial to view its monograph.</p>');
-  
-  // Renal Guardrail States
+
   const [renalAnalysis, setRenalAnalysis] = useState<{ requiresAdjustment: boolean; recommendation: string } | null>(null);
   const [isCheckingRenal, setIsCheckingRenal] = useState(false);
 
-  // Weight-Based Guardrail States
-  const [weightDosingAnalysis, setWeightDosingAnalysis] = useState<{ status: 'SAFE' | 'WARNING', message: string } | null>(null);
-  const [isCheckingWeightDose, setIsCheckingWeightDose] = useState(false);
-
-  // UI States
   const [showMonograph, setShowMonograph] = useState(false);
-  const [showReviewModal, setShowReviewModal] = useState(false);
-  const [reviewSummary, setReviewSummary] = useState<string>('');
+  const [showReview, setShowReview] = useState(false);
   const [isCustomWard, setIsCustomWard] = useState(false);
   const [isMicroCollapsed, setIsMicroCollapsed] = useState(true);
 
   const nextPrevAbxId = React.useRef(1);
   const nextOrganismId = React.useRef(1);
 
-  // Initialize with Data if Editing
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+    
+    if (validationErrors[name]) {
+      setValidationErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors[name];
+        return newErrors;
+      });
+    }
+  };
+
   useEffect(() => {
     if (initialData) {
-        setFormData({
-            ...initialData,
-            req_date: initialData.req_date ? initialData.req_date.split('T')[0] : getTodayDate(),
-            selectedIndicationType: initialData.indication as any || '', // Map indication to selectedIndicationType
-            scr_mgdl: initialData.scr_mgdl === "Pending" ? "" : initialData.scr_mgdl,
-        });
-        
-        if (initialData.scr_mgdl === "Pending") setScrNotAvailable(true);
-        if (initialData.mode) setPatientMode(initialData.mode);
-        
-        // Parse Previous Antibiotics
-        try {
-            const parsedPrevAbx = typeof initialData.previous_antibiotics === 'string' ? JSON.parse(initialData.previous_antibiotics) : initialData.previous_antibiotics;
-            if (Array.isArray(parsedPrevAbx) && parsedPrevAbx.length > 0) {
-                setPrevAbxRows(parsedPrevAbx.map((item: any, idx: number) => ({
-                    id: idx,
-                    drug: item.drug || '',
-                    frequency: item.frequency || '',
-                    duration: item.duration || ''
-                })));
-                nextPrevAbxId.current = parsedPrevAbx.length;
-            }
-        } catch (e) { console.log('Error parsing prev abx', e); }
+      setFormData({
+        ...initialData,
+        req_date: initialData.req_date ? initialData.req_date.split('T')[0] : getTodayDate(),
+        selectedIndicationType: (initialData.indication as any) || '',
+        scr_mgdl: initialData.scr_mgdl === "Pending" ? "" : initialData.scr_mgdl,
+        mode: initialData.mode || 'adult'
+      });
 
-        // Parse Organisms
-        try {
-            const parsedOrgs = typeof initialData.organisms === 'string' ? JSON.parse(initialData.organisms) : initialData.organisms;
-            if (Array.isArray(parsedOrgs) && parsedOrgs.length > 0) {
-                setOrganismBlocks(parsedOrgs.map((item: any, idx: number) => ({
-                    id: idx,
-                    name: item.name || '',
-                    susceptibilities: item.susceptibilities || []
-                })));
-                nextOrganismId.current = parsedOrgs.length;
-            }
-        } catch (e) { console.log('Error parsing organisms', e); }
+      if (initialData.scr_mgdl === "Pending") setScrNotAvailable(true);
+      if (initialData.mode) setPatientMode(initialData.mode);
+
+      try {
+        const parsedPrevAbx = typeof initialData.previous_antibiotics === 'string' ? JSON.parse(initialData.previous_antibiotics) : initialData.previous_antibiotics;
+        if (Array.isArray(parsedPrevAbx) && parsedPrevAbx.length > 0) {
+          setPrevAbxRows(parsedPrevAbx.map((item: any, idx: number) => ({
+            id: idx,
+            drug: item.drug || '',
+            frequency: item.frequency || '',
+            duration: item.duration || ''
+          })));
+          nextPrevAbxId.current = parsedPrevAbx.length;
+        }
+      } catch (e) { console.log('Error parsing prev abx', e); }
+
+      try {
+        const parsedOrgs = typeof initialData.organisms === 'string' ? JSON.parse(initialData.organisms) : initialData.organisms;
+        if (Array.isArray(parsedOrgs) && parsedOrgs.length > 0) {
+          setOrganismBlocks(parsedOrgs.map((item: any, idx: number) => ({
+            id: idx,
+            name: item.name || '',
+            susceptibilities: item.susceptibilities || []
+          })));
+          nextOrganismId.current = parsedOrgs.length;
+        }
+      } catch (e) { console.log('Error parsing organisms', e); }
     }
   }, [initialData]);
-
-  // ... (Rest of component logic is same as before, no changes to existing logic below)
-  // ... (Drug lists memo, renal effect, weight effect, monograph effect, egfr effect, initial useeffect, handlers, validation) ...
 
   const drugLists = useMemo(() => {
     const adultList = Object.entries(ADULT_MONOGRAPHS).map(([drugKey, meta]) => ({
       value: drugKey, label: drugKey, type: meta.restricted ? DrugType.RESTRICTED : DrugType.MONITORED, weightBased: meta.weightBased
-    })).sort((a,b)=>a.label.localeCompare(b.label));
+    })).sort((a, b) => a.label.localeCompare(b.label));
     const pediatricList = Object.entries(PEDIATRIC_MONOGRAPHS).map(([drugKey, meta]) => ({
       value: drugKey, label: drugKey, type: meta.restricted ? DrugType.RESTRICTED : DrugType.MONITORED
-    })).sort((a,b)=>a.label.localeCompare(b.label));
+    })).sort((a, b) => a.label.localeCompare(b.label));
     return { adult: adultList, pediatric: pediatricList };
   }, []);
 
-  // --- Renal Guardrail Effect ---
   useEffect(() => {
     let isActive = true;
-
     const runRenalCheck = async () => {
       if (!formData.antimicrobial || !formData.egfr_text || formData.egfr_text.includes('—') || formData.egfr_text === 'Pending') {
         if (isActive) setRenalAnalysis(null);
         return;
       }
-      const monograph = patientMode === 'adult' 
-        ? ADULT_MONOGRAPHS[formData.antimicrobial] 
+      const monograph = patientMode === 'adult'
+        ? ADULT_MONOGRAPHS[formData.antimicrobial]
         : PEDIATRIC_MONOGRAPHS[formData.antimicrobial];
 
       if (!monograph || !monograph.renal) {
@@ -261,7 +260,7 @@ const AntimicrobialRequestForm: React.FC<AntimicrobialRequestFormProps> = ({ isO
       }
       if (isActive) setIsCheckingRenal(true);
       const result = await checkRenalDosing(formData.antimicrobial, formData.egfr_text, monograph.renal);
-      
+
       if (isActive) {
         setIsCheckingRenal(false);
         if (result && result.requiresAdjustment) {
@@ -274,48 +273,6 @@ const AntimicrobialRequestForm: React.FC<AntimicrobialRequestFormProps> = ({ isO
     const timeoutId = setTimeout(runRenalCheck, 1500);
     return () => { isActive = false; clearTimeout(timeoutId); };
   }, [formData.egfr_text, formData.antimicrobial, patientMode]);
-
-  // --- Weight-Based Dosing Guardrail Effect ---
-  useEffect(() => {
-    let isActive = true;
-    const runWeightDoseCheck = async () => {
-        if (!formData.antimicrobial || !formData.weight_kg || !formData.dose) {
-            if (isActive) setWeightDosingAnalysis(null);
-            return;
-        }
-        let shouldCheck = false;
-        let monographText = '';
-        if (patientMode === 'pediatric') {
-            shouldCheck = true;
-            monographText = PEDIATRIC_MONOGRAPHS[formData.antimicrobial]?.dosing || '';
-        } else {
-            const drugMeta = ADULT_MONOGRAPHS[formData.antimicrobial];
-            if (drugMeta && drugMeta.weightBased) {
-                shouldCheck = true;
-                monographText = drugMeta.dosing;
-            }
-        }
-        if (!shouldCheck || !monographText) {
-            if (isActive) setWeightDosingAnalysis(null);
-            return;
-        }
-        if (isActive) setIsCheckingWeightDose(true);
-        const result = await verifyWeightBasedDosing(
-            patientMode,
-            formData.antimicrobial,
-            formData.weight_kg,
-            formData.dose,
-            formData.frequency || 'N/A',
-            monographText
-        );
-        if (isActive) {
-            setIsCheckingWeightDose(false);
-            setWeightDosingAnalysis(result);
-        }
-    };
-    const timeoutId = setTimeout(runWeightDoseCheck, 2000); 
-    return () => { isActive = false; clearTimeout(timeoutId); };
-  }, [formData.antimicrobial, formData.weight_kg, formData.dose, formData.frequency, patientMode]);
 
   useEffect(() => {
     const currentDrug = formData.antimicrobial;
@@ -330,23 +287,23 @@ const AntimicrobialRequestForm: React.FC<AntimicrobialRequestFormProps> = ({ isO
     }));
 
     if (!selectedDrugMeta) {
-         setMonographHtml(currentDrug ? `<p class="text-gray-700"><strong>${currentDrug}</strong>: No monograph found.</p>` : '<p class="text-gray-600">Select an antimicrobial to view its monograph.</p>');
-         return;
+      setMonographHtml(currentDrug ? `<p class="text-gray-700"><strong>${currentDrug}</strong>: No monograph found.</p>` : '<p class="text-gray-600">Select an antimicrobial to view its monograph.</p>');
+      return;
     }
     const monograph = patientMode === 'adult' ? ADULT_MONOGRAPHS[selectedDrugMeta.value] : PEDIATRIC_MONOGRAPHS[selectedDrugMeta.value];
     if (monograph) {
-        let html = `<h3 class="font-bold text-gray-800 text-lg mb-2">${selectedDrugMeta.value} – ${patientMode === "adult" ? "Adult" : "Pediatric"} Monograph</h3>`;
-        if (monograph.spectrum) html += `<p class="mb-1 text-gray-700"><strong class="text-gray-900">Spectrum:</strong> ${monograph.spectrum}</p>`;
-        if (monograph.dosing) html += `<p class="mb-1 text-gray-700"><strong class="text-gray-900">Dosing:</strong> ${monograph.dosing}</p>`;
-        if (monograph.renal) html += `<p class="mb-1 text-gray-700"><strong class="text-gray-900">Renal adj:</strong> ${monograph.renal}</p>`;
-        if (monograph.hepatic) html += `<p class="mb-1 text-gray-700"><strong class="text-gray-900">Hepatic adj:</strong> ${monograph.hepatic}</p>`;
-        if (monograph.duration) html += `<p class="mb-1 text-gray-700"><strong class="text-gray-900">Typical duration:</strong> ${monograph.duration}</p>`;
-        if (monograph.monitoring) html += `<p class="mb-1 text-gray-700"><strong class="text-gray-900">Monitoring:</strong> ${monograph.monitoring}</p>`;
-        if (monograph.warnings) html += `<p class="mb-1 text-gray-700"><strong class="text-gray-900">Warnings:</strong> ${monograph.warnings}</p>`;
-        if (monograph.ams) html += `<p class="mb-1 text-gray-700"><strong class="text-gray-900">AMS Guidance:</strong> ${monograph.ams}</p>`;
-        setMonographHtml(html);
+      let html = `<h3 class="font-bold text-gray-800 text-lg mb-2">${selectedDrugMeta.value} – ${patientMode === "adult" ? "Adult" : "Pediatric"} Monograph</h3>`;
+      if (monograph.spectrum) html += `<p class="mb-1 text-gray-700"><strong class="text-gray-900">Spectrum:</strong> ${monograph.spectrum}</p>`;
+      if (monograph.dosing) html += `<p class="mb-1 text-gray-700"><strong class="text-gray-900">Dosing:</strong> ${monograph.dosing}</p>`;
+      if (monograph.renal) html += `<p class="mb-1 text-gray-700"><strong class="text-gray-900">Renal adj:</strong> ${monograph.renal}</p>`;
+      if (monograph.hepatic) html += `<p class="mb-1 text-gray-700"><strong class="text-gray-900">Hepatic adj:</strong> ${monograph.hepatic}</p>`;
+      if (monograph.duration) html += `<p class="mb-1 text-gray-700"><strong class="text-gray-900">Typical duration:</strong> ${monograph.duration}</p>`;
+      if (monograph.monitoring) html += `<p class="mb-1 text-gray-700"><strong class="text-gray-900">Monitoring:</strong> ${monograph.monitoring}</p>`;
+      if (monograph.warnings) html += `<p class="mb-1 text-gray-700"><strong class="text-gray-900">Warnings:</strong> ${monograph.warnings}</p>`;
+      if (monograph.ams) html += `<p class="mb-1 text-gray-700"><strong class="text-gray-900">AMS Guidance:</strong> ${monograph.ams}</p>`;
+      setMonographHtml(html);
     } else {
-        setMonographHtml(currentDrug ? `<p class="text-gray-700"><strong>${currentDrug}</strong>: No monograph found.</p>` : '<p class="text-gray-600">Select an antimicrobial to view its monograph.</p>');
+      setMonographHtml(currentDrug ? `<p class="text-gray-700"><strong>${currentDrug}</strong>: No monograph found.</p>` : '<p class="text-gray-600">Select an antimicrobial to view its monograph.</p>');
     }
   }, [patientMode, formData.antimicrobial, drugLists]);
 
@@ -354,27 +311,125 @@ const AntimicrobialRequestForm: React.FC<AntimicrobialRequestFormProps> = ({ isO
     updateEgfr();
   }, [patientMode, formData.age, formData.sex, formData.weight_kg, formData.height_cm, formData.scr_mgdl, scrNotAvailable]);
 
-  useEffect(() => {
-    if (!formData.req_date) {
-      setFormData(prev => ({ ...prev, req_date: getTodayDate() }));
-    }
-    if (prevAbxRows.length === 0) setPrevAbxRows([{ id: nextPrevAbxId.current++, drug: '', frequency: '', duration: '' }]);
-    if (organismBlocks.length === 0) setOrganismBlocks([{ id: nextOrganismId.current++, name: '', susceptibilities: [{ drug: '', result: '' }] }]);
-  }, []);
+  const updateEgfr = () => {
+    const { age, sex, weight_kg, height_cm, scr_mgdl } = formData;
+    let egfrText = '—';
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
-    setValidationErrors(prev => { 
-        const { [name]: removed, ...rest } = prev; 
-        return rest; 
+    if (scrNotAvailable) {
+      egfrText = 'Pending';
+    } else {
+      let ageNum = parseFloat(age);
+      let scrNum = parseFloat(scr_mgdl);
+      let heightNum = parseFloat(height_cm);
+
+      if (!isNaN(scrNum) && scrNum > 0) scrNum = scrNum / 88.4;
+
+      if (isNaN(ageNum) || !sex || isNaN(scrNum)) {
+        egfrText = '—';
+      } else if (patientMode === 'adult') {
+        const egfr = calcCkdEpi2021(ageNum, sex, scrNum);
+        egfrText = isFinite(egfr) ? egfr.toFixed(1) + ' mL/min/1.73m²' : '—';
+      } else {
+        if (isNaN(heightNum)) {
+          egfrText = 'Enter height for pediatric eGFR.';
+        } else {
+          const egfr = calcCkidHeightBased(heightNum, scrNum);
+          egfrText = isFinite(egfr) ? egfr.toFixed(1) + ' mL/min/1.73m²' : '—';
+        }
+      }
+    }
+    setFormData(prev => ({ ...prev, egfr_text: egfrText }));
+  };
+
+  const validateForm = () => {
+    const errors: Record<string, string> = {};
+    const requiredFields: (keyof typeof formData)[] = [
+      'patient_name', 'age', 'sex', 'weight_kg', 'hospital_number', 'ward', 'diagnosis',
+      'antimicrobial', 'dose', 'frequency', 'duration', 'selectedIndicationType', 'basis_indication',
+      'resident_name', 'clinical_dept', 'req_date'
+    ];
+
+    requiredFields.forEach(field => {
+      if (!formData[field] || String(formData[field]).trim() === '') {
+        errors[field] = `${field.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())} is required.`;
+      }
     });
+
+    if (!scrNotAvailable && (!formData.scr_mgdl || String(formData.scr_mgdl).trim() === '')) {
+      errors.scr_mgdl = 'Serum Creatinine is required unless marked as not yet available.';
+    }
+
+    if (patientMode === 'pediatric' && (!formData.height_cm || String(formData.height_cm).trim() === '')) {
+      errors.height_cm = 'Height is required for pediatric patients.';
+    }
+
+    const selectedDrugMeta = drugLists[patientMode].find(d => d.value === formData.antimicrobial);
+    if (selectedDrugMeta && selectedDrugMeta.type === DrugType.RESTRICTED) {
+      if (!formData.service_resident_name || String(formData.service_resident_name).trim() === '') {
+        errors.service_resident_name = 'Service Resident is required for restricted antimicrobials.';
+      }
+      if (!formData.id_specialist || String(formData.id_specialist).trim() === '') {
+        errors.id_specialist = 'ID Specialist is required for restricted antimicrobials.';
+      }
+    }
+
+    setValidationErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  const openReview = () => {
+    if (!validateForm()) {
+      const firstErrorField = Object.keys(validationErrors)[0];
+      if (firstErrorField) {
+        document.getElementById(firstErrorField)?.focus();
+        document.getElementById(firstErrorField)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+      return;
+    }
+    setShowReview(true);
+  };
+
+  const confirmAndSubmit = async () => {
+    const payload: any = {
+      ...formData,
+      req_date: new Date(formData.req_date).toISOString(),
+      timestamp: new Date().toISOString(),
+      scr_mgdl: scrNotAvailable ? "Pending" : formData.scr_mgdl,
+      indication: formData.selectedIndicationType,
+      previous_antibiotics: JSON.stringify(prevAbxRows.filter(r => r.drug || r.frequency || r.duration)),
+      organisms: JSON.stringify(organismBlocks.filter(b => b.name || b.susceptibilities.some(s => s.drug || s.result))),
+      status: PrescriptionStatus.PENDING,
+      resident_name: formData.resident_name,
+      service_resident_name: formData.drug_type === DrugType.RESTRICTED ? formData.service_resident_name : null,
+      id_specialist: formData.drug_type === DrugType.RESTRICTED ? formData.id_specialist : null,
+      dispensed_by: null,
+      dispensed_date: null,
+      disapproved_reason: null,
+      ids_approved_at: null,
+      ids_disapproved_at: null,
+      findings: []
+    };
+
+    delete payload.selectedIndicationType;
+
+    // Remove empty strings
+    Object.keys(payload).forEach(key => {
+      if (payload[key] === '' || payload[key] === null || payload[key] === undefined) {
+        delete payload[key];
+      }
+    });
+
+    if (initialData && initialData.id) {
+      payload.id = initialData.id;
+    }
+
+    await onSubmit(payload);
   };
 
   const handleModeChange = (mode: 'adult' | 'pediatric') => {
     setPatientMode(mode);
-    setFormData(prev => ({ ...prev, mode: mode })); 
-    setValidationErrors({}); 
+    setFormData(prev => ({ ...prev, mode: mode }));
+    setValidationErrors({});
   };
 
   const addPrevAbxRow = () => {
@@ -401,534 +456,254 @@ const AntimicrobialRequestForm: React.FC<AntimicrobialRequestFormProps> = ({ isO
     setOrganismBlocks(prev => prev.filter(block => block.id !== id));
   };
 
-  const updateEgfr = () => {
-    const { age, sex, weight_kg, height_cm, scr_mgdl } = formData;
-    let egfrText = '—';
-    
-    if (scrNotAvailable) {
-      egfrText = 'Pending';
-    } else {
-      let ageNum = parseFloat(age);
-      let scrNum = parseFloat(scr_mgdl);
-      let heightNum = parseFloat(height_cm);
+  const SummaryCard = ({ title, children, className = '' }: { title: string, children: React.ReactNode, className?: string }) => (
+    <div className={`bg-white p-5 rounded-2xl border border-gray-100 shadow-sm ${className}`}>
+      <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-4 border-b border-gray-50 pb-2">{title}</h4>
+      {children}
+    </div>
+  );
 
-      if (!isNaN(scrNum) && scrNum > 0) scrNum = scrNum / 88.4; 
-
-      if (isNaN(ageNum) || !sex || isNaN(scrNum)) {
-        egfrText = '—';
-      } else if (patientMode === 'adult') {
-        const egfr = calcCkdEpi2021(ageNum, sex, scrNum);
-        egfrText = isFinite(egfr) ? egfr.toFixed(1) + ' mL/min/1.73m²' : '—';
-      } else { // pediatric
-        if (isNaN(heightNum)) {
-          egfrText = 'Enter height for pediatric eGFR.';
-        } else {
-          const egfr = calcCkidHeightBased(heightNum, scrNum);
-          egfrText = isFinite(egfr) ? egfr.toFixed(1) + ' mL/min/1.73m²' : '—';
-        }
-      }
-    }
-    setFormData(prev => ({ ...prev, egfr_text: egfrText }));
-  };
-
-  const validateForm = () => {
-    const errors: Record<string, string> = {};
-    const requiredFields: (keyof typeof formData)[] = [
-      'patient_name', 'age', 'sex', 'weight_kg', 'hospital_number', 'ward', 'diagnosis',
-      'antimicrobial', 'dose', 'frequency', 'duration', 'selectedIndicationType', 'basis_indication',
-      'resident_name', 'clinical_dept', 'req_date', 'mode'
-    ];
-
-    requiredFields.forEach(field => {
-      if (!formData[field] || String(formData[field]).trim() === '') {
-        errors[field] = `${field.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())} is required.`;
-      }
-    });
-
-    if (!scrNotAvailable && (!formData.scr_mgdl || String(formData.scr_mgdl).trim() === '')) {
-      errors.scr_mgdl = 'Serum Creatinine is required unless marked as not yet available.';
-    }
-
-    if (patientMode === 'pediatric' && (!formData.height_cm || String(formData.height_cm).trim() === '')) {
-      errors.height_cm = 'Height is required for pediatric patients.';
-    }
-
-    const selectedDrugMeta = drugLists[patientMode].find(d => d.value === formData.antimicrobial);
-    if (selectedDrugMeta && selectedDrugMeta.type === DrugType.RESTRICTED) {
-      if (!formData.service_resident_name || String(formData.service_resident_name).trim() === '') {
-        errors.service_resident_name = 'Service Resident is required for restricted antimicrobials.';
-      }
-      if (!formData.id_specialist || String(formData.id_specialist).trim() === '') {
-        errors.id_specialist = 'ID Specialist is required for restricted antimicrobials.';
-      }
-    }
-    
-    setValidationErrors(errors);
-    return Object.keys(errors).length === 0;
-  };
-
-  const openReviewModal = () => {
-    if (!validateForm()) {
-      const firstErrorField = Object.keys(validationErrors)[0];
-      if (firstErrorField) {
-        document.getElementById(firstErrorField)?.focus();
-        document.getElementById(firstErrorField)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      }
-      return;
-    }
-    setReviewSummary(buildSummary());
-    setShowReviewModal(true);
-  };
-
-  const handleFormSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!validateForm()) return;
-    openReviewModal();
-  };
-
-  const confirmAndSubmit = async () => {
-    const payload: any = {
-      ...formData,
-      req_date: new Date(formData.req_date).toISOString(),
-      timestamp: new Date().toISOString(),
-      scr_mgdl: scrNotAvailable ? "Pending" : formData.scr_mgdl,
-      indication: formData.selectedIndicationType,
-      previous_antibiotics: JSON.stringify(prevAbxRows.filter(r => r.drug || r.frequency || r.duration)),
-      organisms: JSON.stringify(organismBlocks.filter(b => b.name || b.susceptibilities.some(s => s.drug || s.result))),
-      status: PrescriptionStatus.PENDING,
-      service_resident_name: formData.drug_type === DrugType.RESTRICTED ? formData.service_resident_name : null,
-      id_specialist: formData.drug_type === DrugType.RESTRICTED ? formData.id_specialist : null,
-      // Reset approval fields if editing/resubmitting
-      dispensed_by: null,
-      dispensed_date: null,
-      disapproved_reason: null,
-      ids_approved_at: null,
-      ids_disapproved_at: null,
-      findings: [] // Clear previous findings on resubmission
-    };
-    
-    // Cleanup UI-only fields that are not in DB schema
-    delete payload.selectedIndicationType;
-    
-    Object.keys(payload).forEach(key => {
-      if (payload[key] === '' || payload[key] === null || payload[key] === undefined) {
-        delete payload[key];
-      }
-    });
-
-    // Handle Edit vs Create based on initialData existence
-    if (initialData && initialData.id) {
-        payload.id = initialData.id;
-    }
-
-    await onSubmit(payload);
-    setShowReviewModal(false);
-  };
-
-  const buildSummary = () => {
-    // ... existing summary building logic ...
-    const p = { ...formData, mode: patientMode, previous_antibiotics: prevAbxRows, organisms: organismBlocks };
-    const sectionHeader = (title: string) => `<h4 class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3 border-b border-gray-100 pb-1 flex items-center gap-2">${title}</h4>`;
-    const dataRow = (label: string, value: any, fullWidth = false) => `<div class="${fullWidth ? 'col-span-full' : ''}"><p class="text-[10px] text-gray-400 uppercase font-semibold">${label}</p><p class="text-sm text-gray-800 font-medium break-words">${value || '—'}</p></div>`;
-
-    // ... (Use existing summary code from original file here, shortened for brevity as it's repetitive string building) ...
-    let prevAbxHtml = '';
-    const validPrevAbx = p.previous_antibiotics.filter(a => a.drug || a.frequency || a.duration);
-    if (validPrevAbx.length > 0) {
-        prevAbxHtml = `<div class="overflow-x-auto rounded-lg border border-gray-100 mb-4"><table class="w-full text-sm text-left"><thead class="bg-gray-50 text-gray-500 text-xs uppercase"><tr><th class="px-3 py-2 font-semibold">Drug</th><th class="px-3 py-2 font-semibold">Frequency</th><th class="px-3 py-2 font-semibold">Duration</th></tr></thead><tbody class="divide-y divide-gray-100">${validPrevAbx.map(a => `<tr><td class="px-3 py-2 font-medium text-gray-800">${a.drug || '—'}</td><td class="px-3 py-2 text-gray-600">${a.frequency || '—'}</td><td class="px-3 py-2 text-gray-600">${a.duration || '—'}</td></tr>`).join('')}</tbody></table></div>`;
-    } else { prevAbxHtml = `<p class="text-sm text-gray-400 italic mb-4">No previous antibiotics listed.</p>`; }
-
-    let microHtml = '';
-    const filteredOrgs = p.organisms.filter(b => b.name || b.susceptibilities.some(s => s.drug || s.result));
-    if (filteredOrgs.length > 0) {
-        microHtml = `<div class="grid grid-cols-1 gap-3">`;
-        filteredOrgs.forEach(org => {
-            let suscHtml = '';
-             if (org.susceptibilities.length && org.susceptibilities.some(s => s.drug || s.result)) {
-                 suscHtml = `<div class="mt-2 grid grid-cols-2 gap-2 bg-white rounded p-2 border border-gray-100">${org.susceptibilities.filter(s => s.drug || s.result).map(s => `<div class="text-xs"><span class="text-gray-500">${s.drug || '?'}:</span> <span class="font-bold ${s.result === 'R' ? 'text-red-600' : (s.result === 'S' ? 'text-green-600' : 'text-gray-700')}">${s.result || '-'}</span></div>`).join('')}</div>`;
-             }
-            microHtml += `<div class="bg-gray-50 p-3 rounded-md border border-gray-100"><p class="font-bold text-gray-800 text-sm flex items-center gap-2"><svg class="w-3 h-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h.01M12 12h.01M19 12h.01M6 12a1 1 0 11-2 0 1 1 0 012 0zm7 0a1 1 0 11-2 0 1 1 0 012 0zm7 0a1 1 0 11-2 0 1 1 0 012 0z"></path></svg>${org.name || "Unnamed Organism"}</p>${suscHtml}</div>`;
-        });
-        microHtml += `</div>`;
-    } else { microHtml = `<p class="text-sm text-gray-400 italic">No organisms listed.</p>`; }
-
-    let restrictedHtml = "";
-    if (p.drug_type === DrugType.RESTRICTED) { restrictedHtml = `<div class="bg-red-50 p-3 rounded-lg border border-red-100 mt-4">${sectionHeader('Restricted Drug Requirements')}<div class="grid grid-cols-2 gap-4">${dataRow('Service Resident', p.service_resident_name)}${dataRow('ID Specialist', p.id_specialist)}</div></div>`; }
-
-    const indColor = p.selectedIndicationType === 'Therapeutic' ? 'bg-purple-100 text-purple-700 border-purple-200' : (p.selectedIndicationType === 'Prophylactic' ? 'bg-blue-100 text-blue-700 border-blue-200' : 'bg-yellow-100 text-yellow-700 border-yellow-200');
-    const drugColor = p.drug_type === DrugType.RESTRICTED ? 'bg-red-100 text-red-700 border-red-200' : 'bg-blue-100 text-blue-700 border-blue-200';
-
-    return `<div class="space-y-6 font-sans"><div class="grid grid-cols-1 md:grid-cols-2 gap-4"><div class="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">${sectionHeader('Patient Profile')}<div class="flex items-start justify-between mb-3"><div><h3 class="text-lg font-bold text-gray-900">${p.patient_name || '—'}</h3><p class="text-xs text-gray-500 font-mono">${p.hospital_number || '—'}</p></div><span class="px-2 py-1 rounded text-xs font-bold bg-gray-100 text-gray-600">${p.mode === 'adult' ? 'Adult' : 'Pediatric'}</span></div><div class="grid grid-cols-2 gap-y-3 gap-x-2">${dataRow('Age / Sex', `${p.age || '?'} y / ${p.sex || '?'}`)}${dataRow('Wt / Ht', `${p.weight_kg || '?'} kg / ${p.height_cm || '?'} cm`)}${dataRow('Ward', p.ward)}${dataRow('Diagnosis', p.diagnosis, true)}</div></div><div class="bg-white p-4 rounded-lg border border-gray-200 shadow-sm flex flex-col">${sectionHeader('Clinical Indication')}<div class="mb-3"><span class="inline-block px-2 py-1 rounded-md text-xs font-bold border ${indColor}">${p.selectedIndicationType || 'Not Selected'}</span></div><div class="flex-grow">${dataRow('Basis for Indication', p.basis_indication, true)}</div><div class="grid grid-cols-3 gap-2 mt-4 pt-3 border-t border-gray-100">${dataRow('SCr', p.scr_mgdl)}${dataRow('SGPT', p.sgpt)}${dataRow('eGFR', p.egfr_text)}</div></div></div><div class="bg-blue-50 p-4 rounded-lg border border-blue-100">${sectionHeader('Medication Request')}<div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4"><div><span class="text-[10px] text-blue-400 uppercase font-semibold">Antimicrobial</span><h2 class="text-xl font-bold text-blue-900 leading-tight">${p.antimicrobial || '—'}</h2</div><span class="px-3 py-1 rounded-full text-xs font-bold border ${drugColor} self-start md:self-center text-center">${p.drug_type}</span></div><div class="grid grid-cols-3 gap-4 bg-white/60 p-3 rounded-md border border-blue-100/50">${dataRow('Dose', p.dose)}${dataRow('Frequency', p.frequency)}${dataRow('Duration', p.duration)}</div></div><div class="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">${sectionHeader('Microbiology & History')}<div class="mb-4"><p class="text-[10px] text-gray-400 uppercase font-semibold mb-1">Previous Antibiotics</p>${prevAbxHtml}</div><div class="grid grid-cols-1 md:grid-cols-2 gap-6"><div>${dataRow('Specimen Source', p.specimen || '—', true)}</div><div><p class="text-[10px] text-gray-400 uppercase font-semibold mb-2">Organisms Identified</p>${microHtml}</div></div></div><div class="grid grid-cols-1 md:grid-cols-2 gap-4"><div class="bg-gray-50 p-3 rounded-lg border border-gray-200">${sectionHeader('Requesting Physician')}<div class="grid grid-cols-2 gap-3">${dataRow('Resident', p.resident_name)}${dataRow('Department', p.clinical_dept)}</div></div><div class="flex items-center justify-end text-right px-4"><div><p class="text-[10px] text-gray-400 uppercase font-semibold">Request Date</p><p class="text-lg font-bold text-gray-700">${p.req_date}</p></div></div></div>${restrictedHtml}</div>`;
-  };
-
-  const indicationDescription = useMemo(() => {
-    switch (formData.selectedIndicationType) {
-      case 'Empiric': return "Treatment before culture results.";
-      case 'Prophylactic': return "Prevent infection.";
-      case 'Therapeutic': return "Target confirmed infection.";
-      default: return "";
-    }
-  }, [formData.selectedIndicationType]);
+  const SummaryValue = ({ label, value, className = '' }: { label: string, value: any, className?: string }) => (
+    <div className={className}>
+      <p className="text-[10px] text-gray-400 uppercase font-black tracking-tight mb-0.5">{label}</p>
+      <p className="text-sm text-gray-800 font-bold leading-snug">{value || '—'}</p>
+    </div>
+  );
 
   if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4 backdrop-blur-sm animate-fade-in" onClick={onClose}>
-      <div className="bg-white rounded-xl shadow-2xl w-full max-w-5xl max-h-[95vh] flex flex-col overflow-hidden" onClick={(e) => e.stopPropagation()}>
-        {/* Header */}
-        <header className="flex items-center justify-between gap-4 bg-[#009a3e] text-white px-6 py-4 sticky top-0 z-10 shadow-sm">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-5xl max-h-[95vh] flex flex-col overflow-hidden border border-gray-100 relative" onClick={(e) => e.stopPropagation()}>
+        
+        {/* Main Header - Underlying Header */}
+        <header className="flex items-center justify-between gap-4 bg-[#009a3e] text-white px-6 py-4 sticky top-0 z-20 shadow-md">
           <div className="flex items-center gap-3">
-            <img src="https://maxterrenal-hash.github.io/amsone/osmaklogo.png" alt="OsMak Logo" className="h-10 w-auto object-contain" />
-            <h3 className="text-xl font-bold">{initialData ? 'Edit Request' : 'Antimicrobial Request Form'}</h3>
+            <img src={LOGO_URL} alt="OsMak Logo" className="h-10 w-auto object-contain bg-white rounded-full p-1" />
+            <div className="flex flex-col">
+              <h3 className="text-lg font-bold leading-tight uppercase tracking-tight">Antimicrobial Request</h3>
+              <span className="text-[10px] font-medium opacity-80 uppercase tracking-widest">Digital Decision Support</span>
+            </div>
           </div>
           <button onClick={onClose} className="text-white/80 hover:text-white hover:bg-white/20 rounded-full p-2 transition-colors">
             <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
           </button>
         </header>
 
-        {/* Form Body */}
-        <div className="p-6 overflow-y-auto flex-1">
-          {/* Patient Mode Toggle */}
-          <div className="inline-flex rounded-full border border-gray-300 bg-white shadow-sm mb-4">
-            <button
-              type="button"
-              className={`px-4 py-1.5 text-sm font-medium rounded-full transition-colors ${patientMode === 'adult' ? 'bg-green-600 text-white' : 'text-gray-700 hover:bg-gray-100'}`}
-              onClick={() => handleModeChange('adult')}
-            >Adult</button>
-            <button
-              type="button"
-              className={`px-4 py-1.5 text-sm font-medium rounded-full transition-colors ${patientMode === 'pediatric' ? 'bg-green-600 text-white' : 'text-gray-700 hover:bg-gray-100'}`}
-              onClick={() => handleModeChange('pediatric')}
-            >Pediatric</button>
-          </div>
-
-          <form onSubmit={handleFormSubmit} className="space-y-6">
-            {/* Patient Information */}
-            <div className="bg-gray-50 p-4 rounded-lg border border-gray-200 shadow-sm">
-              <h4 className="text-xs font-bold text-gray-500 uppercase mb-4 tracking-wider">Patient Information</h4>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                <FormGroup label="Patient Name (Last, First)" className="lg:col-span-2">
-                  <Input id="patient_name" name="patient_name" value={formData.patient_name} onChange={handleChange} placeholder="e.g. Dela Cruz, Juan" className={validationErrors.patient_name ? 'border-red-500 ring-red-200' : ''} />
-                </FormGroup>
-                <FormGroup label="Hospital Number">
-                  <Input id="hospital_number" name="hospital_number" value={formData.hospital_number} onChange={handleChange} placeholder="ID Number" className={validationErrors.hospital_number ? 'border-red-500 ring-red-200' : ''} />
-                </FormGroup>
-                <FormGroup label="Request Date">
-                  <Input type="date" id="req_date" name="req_date" value={formData.req_date} onChange={handleChange} className={validationErrors.req_date ? 'border-red-500 ring-red-200' : ''} />
-                </FormGroup>
-                <FormGroup label="Age (years)">
-                  <Input type="number" id="age" name="age" value={formData.age} onChange={handleChange} min={0} className={validationErrors.age ? 'border-red-500 ring-red-200' : ''} />
-                </FormGroup>
-                <FormGroup label="Sex">
-                  <Select id="sex" name="sex" value={formData.sex} onChange={handleChange} className={validationErrors.sex ? 'border-red-500 ring-red-200' : ''}>
-                    <option value="">Select</option>
-                    <option value="Male">Male</option>
-                    <option value="Female">Female</option>
-                  </Select>
-                </FormGroup>
-                <FormGroup label="Weight (kg)">
-                  <Input type="number" id="weight_kg" name="weight_kg" value={formData.weight_kg} onChange={handleChange} min={0} step={0.1} className={validationErrors.weight_kg ? 'border-red-500 ring-red-200' : ''} />
-                </FormGroup>
-                <FormGroup label="Height (cm)" className={patientMode === 'pediatric' ? '' : 'hidden'}>
-                  <Input type="number" id="height_cm" name="height_cm" value={formData.height_cm} onChange={handleChange} min={0} step={0.1} className={validationErrors.height_cm ? 'border-red-500 ring-red-200' : ''} />
-                </FormGroup>
-                <FormGroup label="Ward / Unit" className="lg:col-span-2">
-                  <div className="flex gap-2">
-                    <Select
-                      id="ward_select"
-                      name="ward_select"
-                      value={isCustomWard ? 'Others' : (WARDS.includes(formData.ward) ? formData.ward : '')}
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        if (val === 'Others') {
-                          setIsCustomWard(true);
-                          setFormData(prev => ({ ...prev, ward: '' }));
-                        } else {
-                          setIsCustomWard(false);
-                          setFormData(prev => ({ ...prev, ward: val }));
-                        }
-                      }}
-                      className={validationErrors.ward ? 'border-red-500 ring-red-200' : ''}
-                    >
-                      <option value="">Select Ward</option>
-                      {WARDS.map(w => <option key={w} value={w}>{w}</option>)}
-                      <option value="Others">Others (Specify)</option>
-                    </Select>
-                  </div>
-                  {isCustomWard && (
-                    <Input
-                      id="ward"
-                      name="ward"
-                      value={formData.ward}
-                      onChange={handleChange}
-                      placeholder="Specify Ward"
-                      className={`mt-2 ${validationErrors.ward ? 'border-red-500 ring-red-200' : ''}`}
-                    />
-                  )}
-                </FormGroup>
-              </div>
+        {/* Form Body - Always Rendered */}
+        <div className="p-8 overflow-y-auto flex-1 bg-gray-50/50 space-y-8">
+            {/* Patient Mode Toggle */}
+            <div className="flex justify-center mb-4">
+                <div className="inline-flex rounded-xl bg-gray-200 p-1 shadow-inner">
+                    <button type="button" className={`px-6 py-2 text-xs font-bold rounded-lg transition-all ${patientMode === 'adult' ? 'bg-white text-green-700 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`} onClick={() => handleModeChange('adult')}>Adult Patient</button>
+                    <button type="button" className={`px-6 py-2 text-xs font-bold rounded-lg transition-all ${patientMode === 'pediatric' ? 'bg-white text-green-700 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`} onClick={() => handleModeChange('pediatric')}>Pediatric Patient</button>
+                </div>
             </div>
 
-            {/* Clinical & Lab Data */}
-            <div className="bg-gray-50 p-4 rounded-lg border border-gray-200 shadow-sm">
-              <h4 className="text-xs font-bold text-gray-500 uppercase mb-4 tracking-wider">Clinical & Laboratory Data</h4>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                <FormGroup label="Diagnosis" className="md:col-span-2">
-                  <Input id="diagnosis" name="diagnosis" value={formData.diagnosis} onChange={handleChange} className={validationErrors.diagnosis ? 'border-red-500 ring-red-200' : ''} />
-                </FormGroup>
-
-                <FormGroup label="Indication Type" className="lg:col-span-2">
-                    <div className="flex flex-wrap gap-2">
-                        {(['Empiric', 'Prophylactic', 'Therapeutic'] as const).map(ind => (
-                            <button
-                                key={ind}
-                                type="button"
-                                onClick={() => setFormData(prev => ({ ...prev, selectedIndicationType: ind }))}
-                                className={`px-3 py-1 text-sm rounded-full border transition-colors ${formData.selectedIndicationType === ind ? 'bg-green-100 border-green-500 text-green-700 font-semibold' : 'bg-white border-gray-300 text-gray-600 hover:border-gray-400'}`}
-                            >{ind}</button>
-                        ))}
+            <form className="space-y-8 max-w-4xl mx-auto">
+                {/* 1. Profile */}
+                <section className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm space-y-4">
+                    <h4 className="text-[11px] font-black text-gray-400 uppercase tracking-widest border-b border-gray-100 pb-2">Patient Profile</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                        <FormGroup label="Request Date"><Input type="date" name="req_date" value={formData.req_date} onChange={handleChange} /></FormGroup>
+                        <FormGroup label="Full Name (Last, First)" className="md:col-span-2"><Input name="patient_name" value={formData.patient_name} onChange={handleChange} placeholder="e.g. Dela Cruz, Juan" /></FormGroup>
+                        <FormGroup label="Hospital Number"><Input name="hospital_number" value={formData.hospital_number} onChange={handleChange} placeholder="ID Number" /></FormGroup>
+                        <FormGroup label="Age"><Input type="number" name="age" value={formData.age} onChange={handleChange} /></FormGroup>
+                        <FormGroup label="Sex"><Select name="sex" value={formData.sex} onChange={handleChange}><option value="">Select</option><option value="Male">Male</option><option value="Female">Female</option></Select></FormGroup>
+                        <FormGroup label="Weight (kg)"><Input type="number" step="0.1" name="weight_kg" value={formData.weight_kg} onChange={handleChange} /></FormGroup>
+                        <FormGroup label="Height (cm)" className={patientMode === 'pediatric' ? '' : 'hidden'}><Input type="number" step="0.1" name="height_cm" value={formData.height_cm} onChange={handleChange} /></FormGroup>
+                        <FormGroup label="Ward / Unit" className="md:col-span-2">
+                             <Select value={isCustomWard ? 'Others' : formData.ward} onChange={(e) => { const v = e.target.value; if(v==='Others') setIsCustomWard(true); else { setIsCustomWard(false); setFormData(p=>({...p, ward: v})); } }}>
+                                <option value="">Select Ward</option>
+                                {WARDS.map(w => <option key={w} value={w}>{w}</option>)}
+                                <option value="Others">Others (Specify)</option>
+                             </Select>
+                             {isCustomWard && <Input className="mt-2" placeholder="Specify..." value={formData.ward} onChange={e => setFormData(p=>({...p, ward: e.target.value}))} />}
+                        </FormGroup>
                     </div>
-                    {indicationDescription && (
-                      <p className="text-xs text-green-700 bg-green-50 px-2 py-1 rounded border border-green-100 mt-2">
-                        {indicationDescription}
-                      </p>
+                </section>
+
+                {/* 2. Clinical */}
+                <section className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm space-y-4">
+                    <h4 className="text-[11px] font-black text-gray-400 uppercase tracking-widest border-b border-gray-100 pb-2">Clinical Data</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <FormGroup label="Diagnosis"><Input name="diagnosis" value={formData.diagnosis} onChange={handleChange} placeholder="Primary working diagnosis" /></FormGroup>
+                        <FormGroup label="Indication Type">
+                             <div className="flex gap-2">
+                                {(['Empiric', 'Prophylactic', 'Therapeutic'] as const).map(ind => (
+                                    <button key={ind} type="button" onClick={() => setFormData(p=>({...p, selectedIndicationType: ind}))} className={`flex-1 py-2 text-xs font-bold rounded-lg border transition-all ${formData.selectedIndicationType === ind ? 'bg-green-50 border-green-500 text-green-700 shadow-sm' : 'bg-white border-gray-200 text-gray-400 hover:border-gray-300'}`}>{ind}</button>
+                                ))}
+                             </div>
+                        </FormGroup>
+                        <FormGroup label="Basis for Indication" className="md:col-span-2"><Textarea name="basis_indication" value={formData.basis_indication} onChange={handleChange} rows={2} /></FormGroup>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
+                        <FormGroup label="SCr (µmol/L)">
+                             <div className="flex items-center gap-2">
+                                <Input type="number" name="scr_mgdl" value={formData.scr_mgdl} onChange={handleChange} disabled={scrNotAvailable} className="flex-1" />
+                                <label className="flex items-center gap-1.5 cursor-pointer whitespace-nowrap"><input type="checkbox" checked={scrNotAvailable} onChange={e => setScrNotAvailable(e.target.checked)} className="rounded border-gray-300 text-green-600" /><span className="text-[10px] font-bold text-gray-400 uppercase">Pending</span></label>
+                             </div>
+                        </FormGroup>
+                        <FormGroup label="SGPT (U/L)"><Input type="number" name="sgpt" value={formData.sgpt} onChange={handleChange} /></FormGroup>
+                        <FormGroup label="Calculated eGFR"><div className="h-[38px] flex items-center px-3 bg-gray-50 border border-gray-200 rounded-lg text-sm font-bold text-blue-700">{formData.egfr_text}</div></FormGroup>
+                    </div>
+                </section>
+
+                {/* 3. Medication */}
+                <section className="bg-[#f0f9ff] p-6 rounded-2xl border border-blue-100 shadow-sm space-y-4">
+                    <div className="flex justify-between items-center border-b border-blue-50 pb-2">
+                        <h4 className="text-[11px] font-black text-blue-400 uppercase tracking-widest">Medication Request</h4>
+                        <button type="button" onClick={() => setShowMonograph(!showMonograph)} className="text-[10px] font-bold text-blue-600 hover:underline uppercase">{showMonograph ? 'Hide Monograph' : 'View Monograph'}</button>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <FormGroup label="Antimicrobial" className="md:col-span-2">
+                            <Select name="antimicrobial" value={formData.antimicrobial} onChange={handleChange}>
+                                <option value="">Select Drug</option>
+                                {drugLists[patientMode].map(d => <option key={d.value} value={d.value}>{d.label} ({d.type})</option>)}
+                            </Select>
+                        </FormGroup>
+                        <FormGroup label="Drug Type"><div className={`h-[38px] flex items-center justify-center px-3 rounded-lg text-xs font-black uppercase tracking-widest border ${formData.drug_type === DrugType.RESTRICTED ? 'bg-red-50 border-red-200 text-red-700' : 'bg-blue-50 border-blue-200 text-blue-700'}`}>{formData.drug_type}</div></FormGroup>
+                        <FormGroup label="Dose"><Input name="dose" value={formData.dose} onChange={handleChange} placeholder="e.g. 1g" /></FormGroup>
+                        <FormGroup label="Frequency"><Input name="frequency" value={formData.frequency} onChange={handleChange} placeholder="e.g. q8h" /></FormGroup>
+                        <FormGroup label="Duration (Days)"><Input name="duration" value={formData.duration} onChange={handleChange} placeholder="e.g. 7" /></FormGroup>
+                    </div>
+                    {showMonograph && (
+                        <div className="bg-white p-4 rounded-xl border border-blue-100 shadow-sm animate-fade-in max-h-48 overflow-y-auto text-sm text-gray-700" dangerouslySetInnerHTML={{ __html: monographHtml }} />
                     )}
-                </FormGroup>
+                    {/* Guardrails */}
+                    {renalAnalysis && (
+                        <div className="space-y-2">
+                            <div className="p-3 bg-yellow-50 border-l-4 border-yellow-400 text-yellow-800 text-xs rounded-lg font-medium shadow-sm"><strong>Renal Guardrail:</strong> {renalAnalysis.recommendation}</div>
+                        </div>
+                    )}
+                </section>
 
-                <FormGroup label="Basis for Indication" className="col-span-full">
-                  <Textarea id="basis_indication" name="basis_indication" value={formData.basis_indication} onChange={handleChange} placeholder="Describe rationale (clinical findings, suspected source, guideline basis, pending cultures, etc.)" rows={3} className={validationErrors.basis_indication ? 'border-red-500 ring-red-200' : ''} />
-                </FormGroup>
-                
-                <FormGroup label="SGPT (U/L)">
-                  <Input type="number" id="sgpt" name="sgpt" value={formData.sgpt} onChange={handleChange} min={0} className={validationErrors.sgpt ? 'border-red-500 ring-red-200' : ''} />
-                </FormGroup>
-                <FormGroup label="SCr (µmol/L)">
-                  <Input type="number" id="scr_mgdl" name="scr_mgdl" value={formData.scr_mgdl} onChange={handleChange} min={0} step={0.01} disabled={scrNotAvailable} className={validationErrors.scr_mgdl ? 'border-red-500 ring-red-200' : ''} />
-                  <label className="flex items-center text-xs text-gray-600 mt-1">
-                    <input type="checkbox" checked={scrNotAvailable} onChange={(e) => setScrNotAvailable(e.target.checked)} className="mr-2 accent-green-600" />
-                    Creatinine not yet available
-                  </label>
-                </FormGroup>
-                <FormGroup label={patientMode === 'adult' ? "Renal Function (CKD-EPI eGFR)" : "Renal Function (CKiD eGFR)"} className="md:col-span-2">
-                  <div className="rounded-md border border-gray-300 px-2 py-1.5 text-sm bg-gray-100 text-gray-700">{formData.egfr_text || '—'}</div>
-                </FormGroup>
-              </div>
-            </div>
-
-            {/* Antimicrobial Selection */}
-            <div className="bg-blue-50 p-4 rounded-lg border border-blue-200 shadow-sm">
-              <h4 className="text-xs font-bold text-blue-800 uppercase mb-4 tracking-wider">Antimicrobial Selection</h4>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {/* Custom Antimicrobial Field with View Monograph Button */}
-                <div className="md:col-span-2 flex flex-col gap-1">
-                    <div className="flex justify-between items-end">
-                        <label className="text-xs font-semibold text-gray-700">Antimicrobial</label>
-                        {formData.antimicrobial && (
-                            <button 
-                                type="button" 
-                                onClick={() => setShowMonograph(!showMonograph)}
-                                className="text-blue-600 hover:text-blue-800 text-xs flex items-center gap-1 transition-colors font-semibold"
-                            >
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                </svg>
-                                {showMonograph ? 'Hide Monograph' : 'View Monograph'}
-                            </button>
+                {/* 4. Personnel */}
+                <section className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm space-y-4">
+                    <h4 className="text-[11px] font-black text-gray-400 uppercase tracking-widest border-b border-gray-100 pb-2">Accountability</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <FormGroup label="Resident In-Charge"><Input name="resident_name" value={formData.resident_name} onChange={handleChange} placeholder="Ordering physician" /></FormGroup>
+                        <FormGroup label="Clinical Department"><Select name="clinical_dept" value={formData.clinical_dept} onChange={handleChange}><option value="">Select Dept</option>{CLINICAL_DEPARTMENTS.map(d => <option key={d} value={d}>{d}</option>)}</Select></FormGroup>
+                        {formData.drug_type === DrugType.RESTRICTED && (
+                            <>
+                                <FormGroup label="Service Resident"><Input name="service_resident_name" value={formData.service_resident_name} onChange={handleChange} placeholder="IM/Pedia Resident" /></FormGroup>
+                                <FormGroup label="ID Specialist"><Select name="id_specialist" value={formData.id_specialist} onChange={handleChange}><option value="">Select Specialist</option>{(patientMode === 'adult' ? IDS_SPECIALISTS_ADULT : IDS_SPECIALISTS_PEDIATRIC).map(s => <option key={s} value={s}>{s}</option>)}</Select></FormGroup>
+                            </>
                         )}
                     </div>
-                    <Select id="antimicrobial" name="antimicrobial" value={formData.antimicrobial} onChange={handleChange} className={validationErrors.antimicrobial ? 'border-red-500 ring-red-200' : ''}>
-                        <option value="">Select drug</option>
-                        {drugLists[patientMode].map(drug => (
-                        <option key={drug.value} value={drug.value}>{drug.label} ({drug.type})</option>
-                        ))}
-                    </Select>
-                </div>
+                </section>
 
-                <FormGroup label="Drug Type">
-                  <Input type="text" value={formData.drug_type} readOnly className="bg-blue-100 text-blue-800 font-semibold cursor-default" />
-                </FormGroup>
-                
-                {/* Renal Alert Banner */}
-                {isCheckingRenal && <div className="col-span-full text-xs text-gray-500 italic animate-pulse">Checking renal dosing guidelines...</div>}
-                {renalAnalysis && (
-                  <div className="col-span-full bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded-md shadow-sm my-2">
-                    <div className="flex">
-                      <div className="flex-shrink-0">
-                        <svg className="h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
-                          <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                        </svg>
-                      </div>
-                      <div className="ml-3">
-                        <h3 className="text-sm leading-5 font-medium text-yellow-800">
-                          Renal Dosing Alert
-                        </h3>
-                        <div className="mt-2 text-sm leading-5 text-yellow-700">
-                          <p>
-                            Patient eGFR ({formData.egfr_text}) indicates potential renal impairment.
-                            <br/>
-                            <strong>Guideline Recommendation:</strong> {renalAnalysis.recommendation}
-                          </p>
-                        </div>
-                      </div>
+                {/* Error Summary */}
+                {Object.keys(validationErrors).length > 0 && (
+                    <div className="p-4 bg-red-50 border border-red-200 rounded-xl text-xs text-red-800 font-bold space-y-1">
+                        <p className="uppercase tracking-tight">Missing Required Fields:</p>
+                        <ul className="list-disc pl-5 font-medium">{Object.values(validationErrors).map((v, i) => <li key={i}>{v}</li>)}</ul>
                     </div>
-                  </div>
                 )}
-                
-                {/* Weight-Based Dosing Banner */}
-                {isCheckingWeightDose && <div className="col-span-full text-xs text-gray-500 italic animate-pulse">Analyzing weight-based safety...</div>}
-                {weightDosingAnalysis && (
-                  <div className={`col-span-full border-l-4 p-4 rounded-md shadow-sm my-2 ${weightDosingAnalysis.status === 'SAFE' ? 'bg-green-50 border-green-500' : 'bg-yellow-50 border-yellow-400'}`}>
-                    <div className="flex">
-                      <div className="flex-shrink-0">
-                        {weightDosingAnalysis.status === 'SAFE' ? (
-                           <svg className="h-5 w-5 text-green-500" viewBox="0 0 20 20" fill="currentColor">
-                             <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                           </svg>
-                        ) : (
-                           <svg className="h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
-                              <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                           </svg>
-                        )}
-                      </div>
-                      <div className="ml-3">
-                        <h3 className={`text-sm leading-5 font-medium ${weightDosingAnalysis.status === 'SAFE' ? 'text-green-800' : 'text-yellow-800'}`}>
-                          {weightDosingAnalysis.status === 'SAFE' ? 'Dosing Verified' : 'Dosing Caution'}
-                        </h3>
-                        <div className={`mt-2 text-sm leading-5 ${weightDosingAnalysis.status === 'SAFE' ? 'text-green-700' : 'text-yellow-700'}`}>
-                          <p>{weightDosingAnalysis.message}</p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                )}
+            </form>
+        </div>
 
-                <FormGroup label="Dose">
-                  <Input id="dose" name="dose" value={formData.dose} onChange={handleChange} placeholder="e.g. 1g" className={validationErrors.dose ? 'border-red-500 ring-red-200' : ''} />
-                </FormGroup>
-                <FormGroup label="Frequency">
-                  <Input id="frequency" name="frequency" value={formData.frequency} onChange={handleChange} placeholder="e.g. q8h" className={validationErrors.frequency ? 'border-red-500 ring-red-200' : ''} />
-                </FormGroup>
-                <FormGroup label="Duration (days)">
-                  <Input id="duration" name="duration" value={formData.duration} onChange={handleChange} placeholder="e.g. 7 days" className={validationErrors.duration ? 'border-red-500 ring-red-200' : ''} />
-                </FormGroup>
-              </div>
-              
-              {/* Monograph Box - Conditionally Rendered */}
-              {showMonograph && (
-                <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm mt-6 animate-fade-in transition-all duration-300">
-                    <h4 className="text-sm font-bold text-gray-800 mb-2">Drug Monograph</h4>
-                    <div className="text-sm text-gray-700 max-h-48 overflow-y-auto" dangerouslySetInnerHTML={{ __html: monographHtml }}></div>
-                </div>
-              )}
-            </div>
-
-            {/* Microbiology & History */}
-            <div className="bg-gray-50 p-4 rounded-lg border border-gray-200 shadow-sm transition-all duration-300">
-              <div 
-                className="flex justify-between items-center cursor-pointer select-none" 
-                onClick={() => setIsMicroCollapsed(!isMicroCollapsed)}
-              >
-                <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wider flex items-center gap-2">
-                  Microbiology & History
-                </h4>
-                <button type="button" className="text-gray-500 hover:text-gray-700">
-                  {isMicroCollapsed ? (
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" /></svg>
-                  ) : (
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M14.707 12.707a1 1 0 01-1.414 0L10 9.414l-3.293 3.293a1 1 0 01-1.414-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 010 1.414z" clipRule="evenodd" /></svg>
-                  )}
-                </button>
-              </div>
-
-              {!isMicroCollapsed && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4 animate-fade-in">
-                  <FormGroup label="Previous / Current Antibiotics">
-                    <div className="space-y-1">
-                      {prevAbxRows.map(row => (
-                        <PrevAbxRow key={row.id} id={row.id} value={row} onChange={updatePrevAbxRow} onRemove={removePrevAbxRow} />
-                      ))}
-                      <button type="button" onClick={addPrevAbxRow} className="flex items-center text-green-600 hover:text-green-800 text-sm font-medium gap-1 mt-2"><svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg> Add Antibiotic</button>
-                    </div>
-                  </FormGroup>
-                  <div>
-                    <FormGroup label="Specimen Type">
-                      <Input id="specimen" name="specimen" value={formData.specimen} onChange={handleChange} placeholder="e.g. Blood, Sputum, Urine" />
-                    </FormGroup>
-
-                    <FormGroup label="Organisms" className="mt-4">
-                      {organismBlocks.map(block => (
-                        <OrganismBlock key={block.id} id={block.id} value={block} onChange={updateOrganismBlock} onRemove={removeOrganismBlock} />
-                      ))}
-                      <button type="button" onClick={addOrganismBlock} className="flex items-center text-green-600 hover:text-green-800 text-sm font-medium gap-1 mt-2"><svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg> Add Organism</button>
-                    </FormGroup>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Requesting Personnel */}
-            <div className="bg-gray-50 p-4 rounded-lg border border-gray-200 shadow-sm">
-              <h4 className="text-xs font-bold text-gray-500 uppercase mb-4 tracking-wider">Requesting Personnel</h4>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <FormGroup label="Resident In-Charge">
-                  <Input id="resident_name" name="resident_name" value={formData.resident_name} onChange={handleChange} className={validationErrors.resident_name ? 'border-red-500 ring-red-200' : ''} />
-                </FormGroup>
-                <FormGroup label="Clinical Department">
-                  <Select id="clinical_dept" name="clinical_dept" value={formData.clinical_dept} onChange={handleChange} className={validationErrors.clinical_dept ? 'border-red-500 ring-red-200' : ''}>
-                    <option value="">Select Department</option>
-                    {CLINICAL_DEPARTMENTS.map(dept => <option key={dept} value={dept}>{dept}</option>)}
-                  </Select>
-                </FormGroup>
-                {formData.drug_type === DrugType.RESTRICTED && (
-                  <>
-                    <FormGroup label={patientMode === 'adult' ? "Internal Medicine Resident's Name" : "Pediatrics Resident's Name"}>
-                      <Input id="service_resident_name" name="service_resident_name" value={formData.service_resident_name} onChange={handleChange} className={validationErrors.service_resident_name ? 'border-red-500 ring-red-200' : ''} />
-                    </FormGroup>
-                    <FormGroup label="Infectious Disease Specialist">
-                      <Select id="id_specialist" name="id_specialist" value={formData.id_specialist} onChange={handleChange} className={validationErrors.id_specialist ? 'border-red-500 ring-red-200' : ''}>
-                        <option value="">Select</option>
-                        {(patientMode === 'adult' ? IDS_SPECIALISTS_ADULT : IDS_SPECIALISTS_PEDIATRIC).map(name => (<option key={name} value={name}>{name}</option>))}
-                      </Select>
-                    </FormGroup>
-                  </>
-                )}
-              </div>
-            </div>
-            {Object.keys(validationErrors).length > 0 && (
-                <div className="p-3 bg-red-50 border border-red-200 text-red-700 rounded-md text-sm">
-                    Please correct the following errors:
-                    <ul className="list-disc pl-5 mt-2">
-                        {Object.values(validationErrors).map((msg, idx) => <li key={idx}>{msg}</li>)}
-                    </ul>
-                </div>
-            )}
-            <div className="flex justify-end gap-3 pt-4 border-t border-gray-200">
-              <button type="button" onClick={onClose} className="px-5 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm font-medium transition-colors" disabled={loading}>Cancel</button>
-              <button type="submit" disabled={loading} className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm font-medium shadow-sm transition-colors flex items-center gap-2">
+        {/* Footer */}
+        <footer className="p-4 bg-white border-t border-gray-100 flex justify-end gap-3 shrink-0 px-8">
+            <button type="button" onClick={onClose} className="px-6 py-2.5 text-gray-600 hover:bg-gray-100 rounded-xl text-sm font-bold transition-all">Cancel</button>
+            <button type="button" onClick={openReview} disabled={loading} className="px-10 py-2.5 bg-[#009a3e] text-white rounded-xl text-sm font-bold shadow-lg hover:shadow-green-200 transition-all flex items-center gap-2">
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                {loading ? 'Submitting...' : (initialData ? 'Update & Resend' : 'Submit Request')}
-              </button>
-            </div>
-          </form>
-        </div>
+                Review Request
+            </button>
+        </footer>
 
-        {/* Review/Summary Modal */}
-        <div className={`fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center p-4 backdrop-blur-sm ${showReviewModal ? 'block' : 'hidden'}`} onClick={() => setShowReviewModal(false)}>
-            <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto flex flex-col" onClick={(e) => e.stopPropagation()}>
-                <div className="flex justify-between items-center p-4 border-b border-gray-200">
-                    <h3 className="text-lg font-bold text-gray-800">Review Antimicrobial Request</h3>
-                    <button onClick={() => setShowReviewModal(false)} className="text-gray-400 hover:text-gray-700 rounded-full p-1"><svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg></button>
-                </div>
-                <div className="p-4 text-sm text-gray-800" dangerouslySetInnerHTML={{ __html: reviewSummary }}></div>
-                <div className="flex justify-end gap-3 p-4 border-t border-gray-200">
-                    <button onClick={() => setShowReviewModal(false)} className="px-5 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm font-medium transition-colors">Edit</button>
-                    <button onClick={confirmAndSubmit} className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm font-medium shadow-sm transition-colors flex items-center gap-2" disabled={loading}>
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                        {loading ? 'Submitting...' : 'Confirm & Submit'}
-                    </button>
+        {/* Review Overlay - True Modal Overlay */}
+        {showReview && (
+            <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[100] p-4 backdrop-blur-md animate-fade-in" onClick={() => setShowReview(false)}>
+                <div className="bg-white rounded-3xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden border border-white/20 animate-slide-up" onClick={e => e.stopPropagation()}>
+                    <header className="bg-gray-900 text-white p-6 flex justify-between items-center shrink-0">
+                        <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 bg-green-500 rounded-xl flex items-center justify-center shadow-lg shadow-green-500/30">
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                            </div>
+                            <div>
+                                <h3 className="text-xl font-black uppercase tracking-tight">Final Verification</h3>
+                                <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Confirm clinical data before submission</p>
+                            </div>
+                        </div>
+                        <button onClick={() => setShowReview(false)} className="text-white/40 hover:text-white transition-colors p-2 hover:bg-white/10 rounded-full"><svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg></button>
+                    </header>
+
+                    <div className="flex-1 overflow-y-auto p-8 space-y-8 bg-gray-50/50">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            {/* Card 1: Patient Profile */}
+                            <SummaryCard title="Patient Profile">
+                                <h3 className="text-2xl font-black text-gray-900 mb-0.5 capitalize tracking-tight">{formData.patient_name || 'Anonymous'}</h3>
+                                <p className="text-xs font-mono font-bold text-gray-400 mb-6 bg-gray-50 inline-block px-2 py-0.5 rounded border border-gray-100">{formData.hospital_number}</p>
+                                <div className="grid grid-cols-2 gap-y-6 gap-x-4">
+                                    <SummaryValue label="AGE / SEX" value={`${formData.age}y / ${formData.sex}`} />
+                                    <SummaryValue label="WT / HT" value={`${formData.weight_kg}kg / ${formData.height_cm || '?'}cm`} />
+                                    <SummaryValue label="WARD" value={formData.ward} />
+                                    <SummaryValue label="MODE" value={patientMode.toUpperCase()} className="text-green-600" />
+                                </div>
+                            </SummaryCard>
+
+                            {/* Card 2: Diagnostics */}
+                            <SummaryCard title="Clinical Findings">
+                                <div className="mb-4 inline-flex items-center px-3 py-1 rounded-full bg-yellow-100 text-yellow-800 text-[10px] font-black uppercase tracking-widest border border-yellow-200">
+                                    {formData.selectedIndicationType} Indication
+                                </div>
+                                <div className="space-y-6">
+                                    <SummaryValue label="DIAGNOSIS" value={formData.diagnosis} />
+                                    <div className="grid grid-cols-3 gap-2 pt-4 border-t border-gray-50">
+                                        <SummaryValue label="SCR" value={scrNotAvailable ? 'PENDING' : formData.scr_mgdl} />
+                                        <SummaryValue label="SGPT" value={formData.sgpt} />
+                                        <SummaryValue label="EGFR" value={formData.egfr_text?.split(' ')?.[0] || '—'} />
+                                    </div>
+                                </div>
+                            </SummaryCard>
+
+                            {/* Card 3: Medication (Wide) */}
+                            <div className="md:col-span-2 bg-[#f0f7ff] rounded-3xl border border-blue-100 p-8 shadow-sm relative overflow-hidden group">
+                                <div className="absolute top-0 right-0 p-8 opacity-5 pointer-events-none group-hover:opacity-10 transition-opacity">
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-48 w-48" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" /></svg>
+                                </div>
+                                <div className="relative z-10 flex flex-col md:flex-row justify-between items-start mb-8 gap-6">
+                                    <div>
+                                        <p className="text-[10px] font-black text-blue-400 uppercase tracking-widest mb-1">Medication Name</p>
+                                        <div className="flex items-center gap-3">
+                                            <h2 className="text-3xl font-black text-blue-900 tracking-tight">{formData.antimicrobial}</h2>
+                                            <span className={`px-3 py-0.5 rounded-full text-[10px] font-black border uppercase tracking-widest ${formData.drug_type === DrugType.RESTRICTED ? 'bg-red-100 text-red-700 border-red-200' : 'bg-blue-100 text-blue-700 border-blue-200'}`}>{formData.drug_type}</span>
+                                        </div>
+                                    </div>
+                                    <div className="grid grid-cols-3 gap-8 text-right">
+                                        <div><p className="text-[10px] font-black text-blue-400 uppercase tracking-widest">DOSE</p><p className="text-2xl font-black text-blue-900 leading-tight">{formData.dose}</p></div>
+                                        <div><p className="text-[10px] font-black text-blue-400 uppercase tracking-widest">FREQ</p><p className="text-sm font-black text-blue-900 leading-tight">Every {formData.frequency?.replace('q','')}</p><p className="text-[9px] font-black text-blue-400 uppercase">Hours</p></div>
+                                        <div><p className="text-[10px] font-black text-blue-400 uppercase tracking-widest">DAYS</p><p className="text-2xl font-black text-blue-900 leading-tight">{formData.duration}</p></div>
+                                    </div>
+                                </div>
+                                <div className="relative z-10 grid grid-cols-1 md:grid-cols-2 gap-8 pt-6 border-t border-blue-200/50">
+                                    <SummaryValue label="BASIS FOR INDICATION" value={formData.basis_indication} />
+                                    <div className="flex gap-8">
+                                        <SummaryValue label="RESIDENT IN-CHARGE" value={formData.resident_name} />
+                                        {formData.id_specialist && <SummaryValue label="IDS CONSULTANT" value={formData.id_specialist} />}
+                                    </div>
+                                </div>
+                                {renalAnalysis && (
+                                    <div className="mt-4 pt-4 border-t border-blue-200/30">
+                                        <p className="text-[10px] font-bold text-yellow-600 uppercase tracking-widest">Renal Dosing Alert</p>
+                                        <p className="text-xs text-blue-800 mt-1 font-medium">{renalAnalysis.recommendation}</p>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+
+                    <footer className="p-6 bg-white border-t border-gray-100 flex justify-end gap-3 shrink-0">
+                        <button onClick={() => setShowReview(false)} className="px-8 py-3 text-gray-500 font-bold hover:bg-gray-100 rounded-2xl transition-all uppercase text-xs tracking-widest">Back to Edit</button>
+                        <button onClick={confirmAndSubmit} disabled={loading} className="px-12 py-3 bg-[#009a3e] text-white rounded-2xl font-black shadow-xl shadow-green-500/20 hover:bg-green-700 transition-all flex items-center gap-2 transform active:scale-95 uppercase text-xs tracking-widest">
+                            {loading ? 'Submitting...' : 'Confirm & Submit'}
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                        </button>
+                    </footer>
                 </div>
             </div>
-        </div>
+        )}
       </div>
     </div>
   );

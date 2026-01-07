@@ -353,14 +353,15 @@ const MonitoringDetailModal: React.FC<MonitoringDetailModalProps> = ({ isOpen, o
                         type: 'Dose Change',
                         oldValue: d.dose,
                         newValue: newDoseValue,
-                        reason: finalReason
+                        reason: finalReason,
+                        user: user?.name
                     };
                     return { ...d, dose: newDoseValue, change_history: [...(d.change_history || []), newLog] };
                 }
                 else if (statusAction.type === 'Continue') {
                     return { ...d, requesting_resident: continueResident };
                 } else {
-                    const extraFields: any = {};
+                    const extraFields: any = { action_by: user?.name };
                     if (statusAction.type === 'Stopped') {
                         extraFields.stop_date = actionDateTime;
                         extraFields.stop_reason = finalReason;
@@ -398,7 +399,7 @@ const MonitoringDetailModal: React.FC<MonitoringDetailModalProps> = ({ isOpen, o
     try {
         const updatedList = patient.antimicrobials.map(d => {
             if (d.id === undoModal.drugId) {
-                const { stop_date, stop_reason, shifted_at, shift_reason, completed_at, ...rest } = d;
+                const { stop_date, stop_reason, shifted_at, shift_reason, completed_at, action_by, ...rest } = d;
                 return { ...rest, status: 'Active' } as MonitoringAntimicrobial;
             }
             return d;
@@ -874,7 +875,7 @@ const MonitoringDetailModal: React.FC<MonitoringDetailModalProps> = ({ isOpen, o
                                             <div className="mt-2 pt-2 border-t border-red-50 bg-red-50 -mx-5 px-5 pb-2">
                                                 <span className="text-xs font-bold text-red-600 uppercase block">Reason</span>
                                                 <p className="text-sm font-bold text-red-800">{isStopped ? drug.stop_reason : drug.shift_reason || 'N/A'}</p>
-                                                <p className="text-xs text-gray-500">{new Date(drug.stop_date || drug.shifted_at || '').toLocaleString()}</p>
+                                                <p className="text-[10px] text-gray-500">{new Date(drug.stop_date || drug.shifted_at || '').toLocaleString()} {drug.action_by ? `• By: ${drug.action_by}` : ''}</p>
                                             </div>
                                         )}
                                         
@@ -942,10 +943,10 @@ const MonitoringDetailModal: React.FC<MonitoringDetailModalProps> = ({ isOpen, o
                                                                         {logData ? (
                                                                             <div className="flex flex-col items-center justify-center min-h-[32px] group relative">
                                                                                 {logData.status === 'Missed' ? (
-                                                                                    <span className="text-lg leading-none" title={logData.reason || 'Missed'}>❌</span>
+                                                                                    <span className="text-lg leading-none" title={`${logData.reason || 'Missed'}${logData.user ? ` • By: ${logData.user}` : ''}`}>❌</span>
                                                                                 ) : (
                                                                                     <>
-                                                                                        <span className="text-lg leading-none text-green-500">✅</span>
+                                                                                        <span className="text-lg leading-none text-green-500" title={logData.user ? `Logged by: ${logData.user}` : undefined}>✅</span>
                                                                                         <span className="text-[10px] font-mono text-gray-600 leading-tight">{logData.time}</span>
                                                                                     </>
                                                                                 )}
@@ -992,7 +993,7 @@ const MonitoringDetailModal: React.FC<MonitoringDetailModalProps> = ({ isOpen, o
     {/* Status Change Sub-Modal */}
     {statusAction && statusAction.isOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-[150] p-4 backdrop-blur-sm">
-            <div className="bg-white text-gray-900 rounded-xl shadow-2xl p-6 max-w-sm w-full animate-fade-in border border-gray-200">
+            <div className="bg-white text-gray-900 rounded-xl shadow-2xl p-6 max-sm w-full animate-fade-in border border-gray-200">
                 <h3 className="text-lg font-bold text-gray-800 mb-2 border-b border-gray-200 pb-2">Confirm {statusAction.type}</h3>
                 
                 <div className="space-y-4">

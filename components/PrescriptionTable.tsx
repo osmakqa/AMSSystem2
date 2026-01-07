@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo } from 'react';
 import { Prescription, PrescriptionStatus, ActionType } from '../types';
 
@@ -5,7 +6,7 @@ interface PrescriptionTableProps {
   items: Prescription[];
   onAction: (id: number, action: ActionType) => void;
   onView: (item: Prescription) => void;
-  statusType: PrescriptionStatus | 'ALL_VIEW'; // Added 'ALL_VIEW' for Admin All tab
+  statusType: PrescriptionStatus | 'ALL_VIEW';
 }
 
 const PrescriptionTable: React.FC<PrescriptionTableProps> = ({ items, onAction, onView, statusType }) => {
@@ -64,7 +65,7 @@ const PrescriptionTable: React.FC<PrescriptionTableProps> = ({ items, onAction, 
               <th className="px-6 py-3 text-left text-xs font-medium text-green-800 uppercase tracking-wider cursor-pointer select-none hover:bg-green-100" onClick={() => requestSort('patient_name')}>Patient {getSortIcon('patient_name')}</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-green-800 uppercase tracking-wider cursor-pointer select-none hover:bg-green-100" onClick={() => requestSort('antimicrobial')}>Antimicrobial {getSortIcon('antimicrobial')}</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-green-800 uppercase tracking-wider cursor-pointer select-none hover:bg-green-100" onClick={() => requestSort('status')}>Status {getSortIcon('status')}</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-green-800 uppercase tracking-wider cursor-pointer select-none hover:bg-green-100" onClick={() => requestSort('requested_by')}>Requester {getSortIcon('requested_by')}</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-green-800 uppercase tracking-wider cursor-pointer select-none hover:bg-green-100" onClick={() => requestSort('resident_name')}>Resident In-Charge {getSortIcon('resident_name')}</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-green-800 uppercase tracking-wider">Dispensed By</th>
               <th className="px-6 py-3 text-right text-xs font-medium text-green-800 uppercase tracking-wider">Actions</th>
             </tr>
@@ -76,16 +77,14 @@ const PrescriptionTable: React.FC<PrescriptionTableProps> = ({ items, onAction, 
                 <td className="px-6 py-4 whitespace-nowrap"><div className="text-sm font-medium text-gray-900">{item.patient_name}</div><div className="text-xs text-gray-500">{item.hospital_number}</div></td>
                 <td className="px-6 py-4 whitespace-nowrap"><div className="text-sm text-gray-900">{item.antimicrobial}</div><span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${item.drug_type === 'Restricted' ? 'bg-red-100 text-red-800' : 'bg-blue-100 text-blue-800'}`}>{item.drug_type}</span></td>
                 <td className="px-6 py-4 whitespace-nowrap"><span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${getStatusColor(item.status)}`}>{formatStatus(item.status)}</span></td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.requested_by}</td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.resident_name || item.requested_by}</td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.dispensed_by || '-'}</td>
                 <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium" onClick={(e) => e.stopPropagation()}>
                   <div className="flex justify-end gap-2 items-center">
-                    {/* Allow status reversal ONLY if specific status view, NOT in All/Monitored/Restricted summary views to prevent accidents */}
                     {statusType === PrescriptionStatus.APPROVED && (<button onClick={() => onAction(item.id, ActionType.REVERSE_TO_DISAPPROVE)} className="text-red-600 hover:text-red-900 bg-red-50 hover:bg-red-100 border border-red-200 px-3 py-1 rounded text-xs transition-colors">Disapprove</button>)}
                     {statusType === PrescriptionStatus.DISAPPROVED && (<button onClick={() => onAction(item.id, ActionType.REVERSE_TO_APPROVE)} className="text-green-600 hover:text-green-900 bg-green-50 hover:bg-green-100 border border-green-200 px-3 py-1 rounded text-xs transition-colors">Approve</button>)}
                     {(statusType === PrescriptionStatus.FOR_IDS_APPROVAL) && (<button onClick={() => onAction(item.id, ActionType.REVERSE_TO_DISAPPROVE)} className="text-red-600 hover:text-red-900 bg-red-50 hover:bg-red-100 border border-red-200 px-3 py-1 rounded text-xs transition-colors">Disapprove</button>)}
                     
-                    {/* View Only Actions for Admin Lists */}
                     {statusType === 'ALL_VIEW' && (
                        <button className="text-gray-400 cursor-not-allowed" disabled>View Only</button>
                     )}

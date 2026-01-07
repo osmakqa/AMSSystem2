@@ -143,6 +143,7 @@ export interface AdminLogEntry {
   time: string; // "08:00 AM"
   status: 'Given' | 'Missed';
   reason?: string; // If missed
+  user?: string; // Added user who logged
 }
 
 export interface ChangeLogEntry {
@@ -151,6 +152,7 @@ export interface ChangeLogEntry {
   oldValue?: string;
   newValue?: string;
   reason?: string;
+  user?: string; // Added user who performed the change
 }
 
 export interface MonitoringAntimicrobial {
@@ -189,6 +191,9 @@ export interface MonitoringAntimicrobial {
   shift_reason?: string;
   sensitivity_info?: string;
   sensitivity_date?: string;
+  
+  // Trackers for who did the final status action
+  action_by?: string; 
 
   // Change History
   change_history?: ChangeLogEntry[];

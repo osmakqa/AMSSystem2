@@ -8,6 +8,9 @@ interface AMSAuditSummaryProps {
   highlightedSections?: string[];
 }
 
+/**
+ * Reconstructed AMSAuditSummary component to fix truncation and missing export.
+ */
 const AMSAuditSummary: React.FC<AMSAuditSummaryProps> = ({ data, onSectionSelect, highlightedSections = [] }) => {
   // Helper for sections
   const SectionHeader = ({ title, icon }: { title: string, icon?: React.ReactNode }) => (
@@ -58,6 +61,7 @@ const AMSAuditSummary: React.FC<AMSAuditSummaryProps> = ({ data, onSectionSelect
   const micro = data.microorganisms || [];
   const dx = data.diagnostics || {};
   const hist = data.history || {};
+  const auditFindings = data.audit_findings || [];
 
   return (
     <div className="space-y-6 font-sans">
@@ -223,28 +227,42 @@ const AMSAuditSummary: React.FC<AMSAuditSummaryProps> = ({ data, onSectionSelect
              <div className="space-y-2">
                  {micro.map((m: any, i: number) => (
                      <div key={i} className="flex items-center justify-between text-sm bg-gray-50 p-3 rounded-lg border border-gray-200">
-                         <span className="font-bold text-gray-800">{m.organism}</span>
-                         <span className="px-3 py-1 bg-yellow-100 text-yellow-800 border border-yellow-200 rounded-full text-xs font-bold shadow-sm">{m.resistance}</span>
-                         <span className="text-gray-500 italic text-xs">{m.note || "No notes"}</span>
+                        <div>
+                            <span className="font-bold text-gray-800">{m.organism || 'Unknown Organism'}</span>
+                            {m.resistance && <span className="ml-2 text-xs font-bold text-red-600 bg-red-50 px-1.5 py-0.5 rounded border border-red-100">{m.resistance}</span>}
+                        </div>
+                        <span className="text-xs text-gray-500 italic">{m.note}</span>
                      </div>
                  ))}
              </div>
            ) : (
-            <div className="text-center text-gray-400 italic text-sm">
-              No microorganisms recorded.
-            </div>
+             <p className="text-sm text-gray-400 italic">No microbiology data recorded.</p>
            )}
       </SectionWrapper>
 
       {/* General Audit Note */}
-      {data.general_audit_note && (
-        <SectionWrapper id="general_note" title="General Note" className="bg-amber-50 p-4 rounded-xl shadow-sm border border-amber-200">
-            <h4 className="text-xs font-bold text-amber-800 uppercase tracking-wider mb-2 flex items-center gap-2">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" /></svg>
-                General Audit Note
-            </h4>
-            <p className="text-sm text-gray-800 italic whitespace-pre-wrap">{data.general_audit_note}</p>
-        </SectionWrapper>
+      <SectionWrapper id="general_note" title="General Audit Notes" className="bg-amber-50 p-4 rounded-xl border border-amber-200">
+          <SectionHeader title="General Audit Notes" icon={<svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-amber-600" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" /></svg>} />
+          <p className="text-sm text-amber-900 font-medium whitespace-pre-wrap">{data.general_audit_note || 'No general notes provided.'}</p>
+      </SectionWrapper>
+
+      {/* Review Findings */}
+      {auditFindings.length > 0 && (
+          <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
+              <SectionHeader title="Reviewer Findings" icon={<svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-indigo-600" viewBox="0 0 20 20" fill="currentColor"><path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z" /><path fillRule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z" clipRule="evenodd" /></svg>} />
+              <div className="space-y-3">
+                  {auditFindings.map((f, idx) => (
+                      <div key={idx} className="bg-indigo-50 border-l-4 border-indigo-500 p-3 rounded-md shadow-sm relative group">
+                          <p className="text-xs font-bold text-indigo-800 uppercase mb-1">{f.section}</p>
+                          <p className="text-sm font-bold text-gray-900">{f.category}</p>
+                          <p className="text-xs text-gray-600 mt-1">{f.details}</p>
+                          <div className="mt-2 text-right">
+                              <span className="text-[10px] text-indigo-800 font-bold bg-white/40 px-1.5 py-0.5 rounded">Recorded by: {f.user} • {new Date(f.timestamp).toLocaleString()}</span>
+                          </div>
+                      </div>
+                  ))}
+              </div>
+          </div>
       )}
     </div>
   );

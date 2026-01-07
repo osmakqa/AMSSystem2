@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Prescription } from '../types';
 
@@ -14,16 +15,15 @@ const ChartDetailModal: React.FC<ChartDetailModalProps> = ({ isOpen, onClose, da
   const exportToCsv = () => {
     if (data.length === 0) return;
     
-    // Define which columns to export and their headers
     const headers = [
       'ID', 'Request Date', 'Patient Name', 'Hospital Number', 'Ward', 
-      'Antimicrobial', 'Drug Type', 'Indication', 'Requested By', 
+      'Antimicrobial', 'Drug Type', 'Indication', 'Resident In-Charge', 
       'Dispensed By', 'Status'
     ];
 
     const keys: (keyof Prescription)[] = [
       'id', 'req_date', 'patient_name', 'hospital_number', 'ward', 
-      'antimicrobial', 'drug_type', 'indication', 'requested_by', 
+      'antimicrobial', 'drug_type', 'indication', 'resident_name', 
       'dispensed_by', 'status'
     ];
 
@@ -35,7 +35,6 @@ const ChartDetailModal: React.FC<ChartDetailModalProps> = ({ isOpen, onClose, da
           if (value === null || value === undefined) {
             return '';
           }
-          // Stringify and escape commas and quotes
           let stringValue = String(value);
           if (stringValue.includes(',') || stringValue.includes('"') || stringValue.includes('\n')) {
             stringValue = `"${stringValue.replace(/"/g, '""')}"`;

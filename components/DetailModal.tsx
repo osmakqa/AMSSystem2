@@ -10,6 +10,7 @@ interface DetailModalProps {
   onClose: () => void;
   item: Prescription | null;
   role?: string;
+  userName?: string;
   onAction?: (id: number, action: ActionType, payload?: any) => void;
 }
 
@@ -20,7 +21,7 @@ const LifecycleTracker: React.FC<{ item: Prescription }> = ({ item }) => {
       name: 'Request Created',
       isComplete: true,
       isInProgress: false,
-      info: `By ${item.requested_by} on ${new Date(item.req_date).toLocaleDateString()}`
+      info: `By ${item.resident_name || item.requested_by} on ${new Date(item.req_date).toLocaleDateString()}`
     },
     {
       name: 'Pharmacist Action',
@@ -93,7 +94,7 @@ const FINDING_CATEGORIES = [
   'Others'
 ];
 
-const DetailModal: React.FC<DetailModalProps> = ({ isOpen, onClose, item, role, onAction }) => {
+const DetailModal: React.FC<DetailModalProps> = ({ isOpen, onClose, item, role, userName, onAction }) => {
   const [dosingCheck, setDosingCheck] = useState<{ isSafe: boolean; message: string } | null>(null);
   const [isCheckingDose, setIsCheckingDose] = useState(false);
   
@@ -194,7 +195,7 @@ const DetailModal: React.FC<DetailModalProps> = ({ isOpen, onClose, item, role, 
       category: currentCategory as any,
       details: currentDetails,
       timestamp: new Date().toISOString(),
-      user: role || 'Unknown'
+      user: userName || (role === UserRole.PHARMACIST ? `Pharmacist` : `Admin`)
     };
     setFindings([...findings, newFinding]);
     setCurrentCategory('');
@@ -234,7 +235,7 @@ const DetailModal: React.FC<DetailModalProps> = ({ isOpen, onClose, item, role, 
     );
   };
   
-  const FormattedBlock = ({ label, value, colorClass = "bg-gray-50 border-gray-200 text-gray-800" }: { label: string, value?: any, colorClass?: string }) => {
+  const FormFormattedBlock = ({ label, value, colorClass = "bg-gray-50 border-gray-200 text-gray-800" }: { label: string, value?: any, colorClass?: string }) => {
     const renderOrganismsJSON = (val: any) => {
         try {
             const data = typeof val === 'string' && (val.startsWith('[') || val.startsWith('{')) ? JSON.parse(val) : val;
@@ -368,6 +369,9 @@ const DetailModal: React.FC<DetailModalProps> = ({ isOpen, onClose, item, role, 
                                             <p className="text-xs font-bold text-red-800 uppercase mb-1">{f.section}</p>
                                             <p className="text-sm font-bold text-gray-900">{f.category}</p>
                                             <p className="text-xs text-gray-600 mt-1">{f.details}</p>
+                                            <div className="mt-2 text-right">
+                                                <span className="text-[10px] text-red-800 font-bold bg-white/40 px-1.5 py-0.5 rounded">Recorded by: {f.user}</span>
+                                            </div>
                                         </div>
                                     ))}
                                 </div>
@@ -378,7 +382,7 @@ const DetailModal: React.FC<DetailModalProps> = ({ isOpen, onClose, item, role, 
                         </div>
                     )}
                     
-                    <SelectableSection id="Microbiology & History" title="Microbiology & History" className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm md:col-span-2 group"><div className="grid grid-cols-1 md:grid-cols-2 gap-6"><div className="space-y-3"><FormattedBlock label="Previous Antibiotics" value={item.previous_antibiotics} colorClass="bg-orange-50 border-orange-100 text-orange-900"/></div><div className="space-y-3"><FormattedBlock label="Organisms / Specimen" value={item.organisms} colorClass="bg-red-50 border-red-100 text-red-900"/><InfoItem label="Specimen Source" value={item.specimen} fullWidth /></div></div></SelectableSection>
+                    <SelectableSection id="Microbiology & History" title="Microbiology & History" className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm md:col-span-2 group"><div className="grid grid-cols-1 md:grid-cols-2 gap-6"><div className="space-y-3"><FormFormattedBlock label="Previous Antibiotics" value={item.previous_antibiotics} colorClass="bg-orange-50 border-orange-100 text-orange-900"/></div><div className="space-y-3"><FormFormattedBlock label="Organisms / Specimen" value={item.organisms} colorClass="bg-red-50 border-red-100 text-red-900"/><InfoItem label="Specimen Source" value={item.specimen} fullWidth /></div></div></SelectableSection>
                     
                     <SelectableSection id="Personnel Involved" title="Personnel Involved" className="bg-gray-50 p-4 rounded-lg border border-gray-100 col-span-full group"><div className="grid grid-cols-2 md:grid-cols-4 gap-4"><InfoItem label="Resident In-Charge" value={item.resident_name} /><InfoItem label="Service Resident" value={item.service_resident_name} /><InfoItem label="Clinical Dept" value={item.clinical_dept} /><InfoItem label="ID Specialist" value={item.id_specialist} /><div className="col-span-full pt-2 border-t border-gray-200 mt-2 grid grid-cols-2 md:grid-cols-4 gap-4"><InfoItem label="Dispensed By" value={item.dispensed_by} /><InfoItem label="Pharmacist Action Date" value={formatDate(item.dispensed_date)} /><InfoItem label="IDS Approval Date" value={formatDate(item.ids_approved_at)} /><InfoItem label="IDS Disapproval Date" value={formatDate(item.ids_disapproved_at)} /></div></div></SelectableSection>
                 </div>
@@ -455,6 +459,9 @@ const DetailModal: React.FC<DetailModalProps> = ({ isOpen, onClose, item, role, 
                                         <p className="text-xs font-bold text-red-800 uppercase mb-1">{f.section}</p>
                                         <p className="text-sm font-bold text-gray-900">{f.category}</p>
                                         <p className="text-xs text-gray-600 mt-1">{f.details}</p>
+                                        <div className="mt-2 text-right">
+                                            <span className="text-[9px] text-red-800 font-bold opacity-80 italic">By: {f.user}</span>
+                                        </div>
                                     </div>
                                 ))}
                             </div>
