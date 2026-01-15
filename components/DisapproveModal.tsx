@@ -1,4 +1,5 @@
 
+
 import React, { useState } from 'react';
 
 interface DisapproveModalProps {
@@ -13,6 +14,26 @@ const WarningIcon = () => (
     <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
     </svg>
+);
+
+// Custom styled radio button component
+const ReasonOption = ({ value, selectedReason, onChange, children }: { value: string, selectedReason: string, onChange: (val: string) => void, children: React.ReactNode }) => (
+  <label className={`
+    flex items-center p-3 rounded-lg border-2 cursor-pointer transition-all
+    ${selectedReason === value 
+      ? 'bg-red-50 border-red-500 shadow-inner' 
+      : 'bg-white border-gray-200 hover:border-red-300'}
+  `}>
+    <input
+      type="radio"
+      name="reason"
+      value={value}
+      checked={selectedReason === value}
+      onChange={() => onChange(value)}
+      className="h-4 w-4 text-red-600 focus:ring-red-500 border-gray-300"
+    />
+    <span className={`ml-3 font-medium ${selectedReason === value ? 'text-red-800' : 'text-gray-700'}`}>{children}</span>
+  </label>
 );
 
 const DisapproveModal: React.FC<DisapproveModalProps> = ({ isOpen, onClose, onSubmit, loading }) => {
@@ -38,26 +59,6 @@ const DisapproveModal: React.FC<DisapproveModalProps> = ({ isOpen, onClose, onSu
     }
     onSubmit(reason, details);
   };
-  
-  // Custom styled radio button component
-  const ReasonOption = ({ value, children }: { value: string, children: React.ReactNode }) => (
-    <label className={`
-      flex items-center p-3 rounded-lg border-2 cursor-pointer transition-all
-      ${reason === value 
-        ? 'bg-red-50 border-red-500 shadow-inner' 
-        : 'bg-white border-gray-200 hover:border-red-300'}
-    `}>
-      <input
-        type="radio"
-        name="reason"
-        value={value}
-        checked={reason === value}
-        onChange={() => setReason(value)}
-        className="h-4 w-4 text-red-600 focus:ring-red-500 border-gray-300"
-      />
-      <span className={`ml-3 font-medium ${reason === value ? 'text-red-800' : 'text-gray-700'}`}>{children}</span>
-    </label>
-  );
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4 backdrop-blur-sm animate-fade-in">
@@ -72,7 +73,7 @@ const DisapproveModal: React.FC<DisapproveModalProps> = ({ isOpen, onClose, onSu
           {/* Reason Selection */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-5">
             {reasons.map(r => (
-              <ReasonOption key={r} value={r}>{r}</ReasonOption>
+              <ReasonOption key={r} value={r} selectedReason={reason} onChange={setReason}>{r}</ReasonOption>
             ))}
           </div>
 

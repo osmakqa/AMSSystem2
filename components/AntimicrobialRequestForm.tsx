@@ -48,7 +48,7 @@ const getTodayDate = () => {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 };
 
-const FormGroup = ({ label, children, className = '' }: { label: string, children: React.ReactNode, className?: string }) => (
+const FormGroup = ({ label, children, className = '' }: { label: string, children?: React.ReactNode, className?: string }) => (
   <div className={`flex flex-col gap-1 ${className}`}>
     <label className="text-[10px] font-bold text-gray-500 uppercase tracking-tight">{label}</label>
     {children}
@@ -357,7 +357,7 @@ const AntimicrobialRequestForm: React.FC<AntimicrobialRequestFormProps> = ({ isO
 
     requiredFields.forEach(field => {
       if (!formData[field] || String(formData[field]).trim() === '') {
-        errors[field] = `${field.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())} is required.`;
+        errors[field] = `${String(field).replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())} is required.`;
       }
     });
 
@@ -462,7 +462,7 @@ const AntimicrobialRequestForm: React.FC<AntimicrobialRequestFormProps> = ({ isO
     setOrganismBlocks(prev => prev.filter(block => block.id !== id));
   };
 
-  const SummaryCard = ({ title, children, className = '' }: { title: string, children: React.ReactNode, className?: string }) => (
+  const SummaryCard = ({ title, children, className = '' }: { title: string, children?: React.ReactNode, className?: string }) => (
     <div className={`bg-white p-5 rounded-2xl border border-gray-100 shadow-sm ${className}`}>
       <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-4 border-b border-gray-50 pb-2">{title}</h4>
       {children}
@@ -543,7 +543,7 @@ const AntimicrobialRequestForm: React.FC<AntimicrobialRequestFormProps> = ({ isO
                         <FormGroup label="Basis for Indication" className="md:col-span-2"><Textarea error={!!validationErrors.basis_indication} name="basis_indication" value={formData.basis_indication} onChange={handleChange} rows={2} /></FormGroup>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
-                        <FormGroup label="SCr (µmol/L)">
+                        <FormGroup label="Serum Creatinine (µmol/L)">
                              <div className="flex items-center gap-2">
                                 <Input error={!!validationErrors.scr_mgdl} type="number" name="scr_mgdl" value={formData.scr_mgdl} onChange={handleChange} disabled={scrNotAvailable} className="flex-1" />
                                 <label className="flex items-center gap-1.5 cursor-pointer whitespace-nowrap"><input type="checkbox" checked={scrNotAvailable} onChange={e => setScrNotAvailable(e.target.checked)} className="rounded border-gray-300 text-green-600" /><span className="text-[10px] font-bold text-gray-400 uppercase">Pending</span></label>
@@ -554,7 +554,43 @@ const AntimicrobialRequestForm: React.FC<AntimicrobialRequestFormProps> = ({ isO
                     </div>
                 </section>
 
-                {/* 3. Medication */}
+                {/* 3. Microbiology & History */}
+                <section className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm space-y-4">
+                    <h4 className="text-[11px] font-black text-gray-400 uppercase tracking-widest border-b border-gray-100 pb-2">Microbiology & History</h4>
+                    
+                    {/* Previous Antibiotics */}
+                    <div>
+                        <div className="flex justify-between items-center mb-2">
+                            <label className="text-[10px] font-bold text-gray-500 uppercase tracking-tight">Previous Antibiotics (Last 30 days)</label>
+                            <button type="button" onClick={addPrevAbxRow} className="text-green-600 hover:text-green-800 text-xs font-bold flex items-center gap-1">
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg> Add Drug
+                            </button>
+                        </div>
+                        <div className="space-y-2">
+                            {prevAbxRows.map(row => (
+                                <PrevAbxRow key={row.id} id={row.id} value={row} onChange={updatePrevAbxRow} onRemove={removePrevAbxRow} />
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Microbiology */}
+                    <div className="pt-2 border-t border-gray-100">
+                        <div className="flex justify-between items-center mb-2">
+                            <label className="text-[10px] font-bold text-gray-500 uppercase tracking-tight">Culture & Sensitivity</label>
+                            <button type="button" onClick={addOrganismBlock} className="text-green-600 hover:text-green-800 text-xs font-bold flex items-center gap-1">
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg> Add Organism
+                            </button>
+                        </div>
+                        <FormGroup label="Specimen Source"><Input name="specimen" value={formData.specimen} onChange={handleChange} placeholder="e.g. Blood, Urine, Sputum" /></FormGroup>
+                        <div className="mt-3 space-y-3">
+                            {organismBlocks.map(block => (
+                                <OrganismBlock key={block.id} id={block.id} value={block} onChange={updateOrganismBlock} onRemove={removeOrganismBlock} />
+                            ))}
+                        </div>
+                    </div>
+                </section>
+
+                {/* 4. Medication */}
                 <section className="bg-[#f0f9ff] p-6 rounded-2xl border border-blue-100 shadow-sm space-y-4">
                     <div className="flex justify-between items-center border-b border-blue-50 pb-2">
                         <h4 className="text-[11px] font-black text-blue-400 uppercase tracking-widest">Medication Request</h4>
@@ -583,7 +619,7 @@ const AntimicrobialRequestForm: React.FC<AntimicrobialRequestFormProps> = ({ isO
                     )}
                 </section>
 
-                {/* 4. Personnel */}
+                {/* 5. Personnel */}
                 <section className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm space-y-4">
                     <h4 className="text-[11px] font-black text-gray-400 uppercase tracking-widest border-b border-gray-100 pb-2">Accountability</h4>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -663,7 +699,46 @@ const AntimicrobialRequestForm: React.FC<AntimicrobialRequestFormProps> = ({ isO
                                 </div>
                             </SummaryCard>
 
-                            {/* Card 3: Medication (Wide) */}
+                            {/* Card 3: Microbiology (New Review Card) */}
+                            <SummaryCard title="Microbiology & History">
+                                <div className="space-y-4">
+                                    <div>
+                                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Previous Antibiotics</p>
+                                        <div className="text-sm font-medium text-gray-800 space-y-1">
+                                            {prevAbxRows.filter(r => r.drug).length > 0 ? (
+                                                prevAbxRows.filter(r => r.drug).map((r, i) => (
+                                                    <p key={i}>{r.drug} - {r.duration} ({r.frequency})</p>
+                                                ))
+                                            ) : <span className="text-gray-400 italic">None recorded</span>}
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Specimen</p>
+                                        <p className="text-sm font-bold text-gray-800">{formData.specimen || 'Not specified'}</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Organisms</p>
+                                        <div className="text-sm font-medium text-gray-800 space-y-2">
+                                            {organismBlocks.filter(b => b.name).length > 0 ? (
+                                                organismBlocks.filter(b => b.name).map((b, i) => (
+                                                    <div key={i}>
+                                                        <span className="font-bold">{b.name}</span>
+                                                        {b.susceptibilities.filter(s => s.drug).length > 0 && (
+                                                            <ul className="pl-2 mt-1 text-xs text-gray-600 border-l-2 border-gray-200">
+                                                                {b.susceptibilities.filter(s => s.drug).map((s, j) => (
+                                                                    <li key={j}>{s.drug}: <span className={s.result === 'S' ? 'text-green-600 font-bold' : (s.result === 'R' ? 'text-red-600 font-bold' : '')}>{s.result}</span></li>
+                                                                ))}
+                                                            </ul>
+                                                        )}
+                                                    </div>
+                                                ))
+                                            ) : <span className="text-gray-400 italic">None recorded</span>}
+                                        </div>
+                                    </div>
+                                </div>
+                            </SummaryCard>
+
+                            {/* Card 4: Medication (Wide) */}
                             <div className="md:col-span-2 bg-[#f0f7ff] rounded-3xl border border-blue-100 p-8 shadow-sm relative overflow-hidden group">
                                 <div className="relative z-10 flex flex-col md:flex-row justify-between items-start mb-8 gap-6">
                                     <div>

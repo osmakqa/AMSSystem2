@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo } from 'react';
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, 
@@ -34,7 +35,7 @@ const formatDuration = (ms: number) => {
 };
 
 // --- Reusable UI Components ---
-const ChartWrapper = ({ title, children, onClick }: { title: string, children: React.ReactNode, onClick?: () => void }) => (
+const ChartWrapper = ({ title, children, onClick }: { title: string, children?: React.ReactNode, onClick?: () => void }) => (
   <div 
     className={`bg-white p-6 rounded-xl shadow-lg border border-gray-200 h-[400px] flex flex-col transition-all duration-300 ${onClick ? 'cursor-pointer hover:shadow-2xl hover:border-green-300 hover:-translate-y-1' : ''}`}
     onClick={onClick}
@@ -260,7 +261,7 @@ const StatsChart: React.FC<StatsChartProps> = ({ data, allData, auditData = [], 
     
     const interventionStats = getFindingsDistribution(source);
 
-    const avgTimePerIds = Object.entries(idsConsults.reduce((acc, curr) => {
+    const avgTimePerIds = Object.entries((idsConsults as Prescription[]).reduce((acc: Record<string, number[]>, curr: Prescription) => {
         if (curr.id_specialist) { // Use id_specialist here
             const approvedTime = curr.ids_approved_at ? new Date(curr.ids_approved_at).getTime() : NaN;
             const disapprovedTime = curr.ids_disapproved_at ? new Date(curr.ids_disapproved_at).getTime() : NaN;

@@ -1,6 +1,3 @@
-
-
-
 import React, { useState, useEffect, useRef } from 'react';
 import { createAudit, updateAudit } from '../services/dataService';
 import { AMSAudit } from '../types';
@@ -8,7 +5,7 @@ import AMSAuditSummary from './AMSAuditSummary';
 import { checkRenalDosing, verifyWeightBasedDosing, verifyPediatricDosing } from '../services/geminiService';
 import { ADULT_MONOGRAPHS } from '../data/adultMonographs';
 import { PEDIATRIC_MONOGRAPHS } from '../data/pediatricMonographs';
-import { MONITORED_DRUGS, RESTRICTED_DRUGS, WARDS } from '../constants'; // Import drug lists
+import { MONITORED_DRUGS, RESTRICTED_DRUGS, WARDS } from '../constants';
 
 // --- CONSTANTS ---
 const AREAS = [
@@ -23,11 +20,6 @@ const INDICATION_CATEGORIES_OPTIONS = ["CAI", "HAI", "SP", "MP", "OTH", "UNK"];
 const HAI_SUB_CATEGORIES_OPTIONS = ["HAI1", "HAI2", "HAI3", "HAI4", "HAI5", "HAI6"];
 const HAI2_SPECIFIC_OPTIONS = ["HAI2-CVC-BSI", "HAI2-PVC-BSI", "HAI2-VAP", "HAI2-CAUTI"];
 const SP_TYPES_OPTIONS = ["SP1", "SP2", "SP3"];
-
-const RES_TYPES = ["MRSA", "MRCoNS", "PNSP", "MLS", "VRE", "ESBL", "3GCREB", "CRE", "ESBL-NF", "CR-NF", "other MDRO"];
-const MISS_REASONS = ["stock out", "could not purchase", "patient refused", "other reason", "multiple reasons", "unknown"];
-
-const DIAG_PRIMARY = ["Therapeutic", "Prophylaxis", "Neonates"];
 
 const SITE_CATEGORIES = ["CNS", "EYE", "ENT", "RESP", "CVS", "GI", "SSTBJ", "UTI", "GUOB", "No defined site (NDS)"];
 
@@ -131,7 +123,21 @@ const CODE_DESCRIPTIONS: Record<string, string> = {
   "OTH": "Any other use. Example: erythromycin as a motility agent (motilin agonist).",
 };
 
-// ... (Rest of component remains same) ...
+const DIAG_PRIMARY = ["Therapeutic", "Prophylaxis", "Neonates"];
+
+const MISS_REASONS = [
+  "Stock Out",
+  "Patient Refused",
+  "NPO",
+  "IV Access Issue",
+  "Patient out of ward",
+  "Others (Specify)"
+];
+
+const RES_TYPES = [
+  "ESBL", "CRE", "MRSA", "VRE", "MDR", "XDR", "PDR", "Carbapenemase-producing"
+];
+
 // --- HELPERS FOR eGFR CALCULATION ---
 const calcCkdEpi2021 = (age: number, sex: string, scr: number) => {
   const k = sex === "Female" ? 0.7 : 0.9;
@@ -162,7 +168,7 @@ interface AntimicrobialEntry {
   perday: string;
   route: string;
   diagP: string;
-  diagS: string; // This is the problematic property
+  diagS: string;
   diagSub: string;
   indicationCategory: string;
   indicationSubCategory: string;
@@ -189,8 +195,24 @@ interface AMSAuditFormProps {
   initialData?: AMSAudit | null;
 }
 
+const getIndicationDescription = (a: AntimicrobialEntry) => {
+  if (a.diagSub && CODE_DESCRIPTIONS[a.diagSub]) {
+    return CODE_DESCRIPTIONS[a.diagSub];
+  }
+  if (a.indicationSpecificType && CODE_DESCRIPTIONS[a.indicationSpecificType]) {
+      return CODE_DESCRIPTIONS[a.indicationSpecificType];
+  }
+  if (a.indicationSubCategory && CODE_DESCRIPTIONS[a.indicationSubCategory]) {
+      return CODE_DESCRIPTIONS[a.indicationSubCategory];
+  }
+  if (a.indicationCategory && CODE_DESCRIPTIONS[a.indicationCategory]) {
+      return CODE_DESCRIPTIONS[a.indicationCategory];
+  }
+  return "";
+};
+
 // --- SUB-COMPONENTS ---
-const FormGroup = ({ label, required, children, className = '', error }: { label: string, required?: boolean, children: React.ReactNode, className?: string, error?: string }) => (
+const FormGroup = ({ label, required, children, className = '', error }: { label: string, required?: boolean, children?: React.ReactNode, className?: string, error?: string }) => (
   <div className={`flex flex-col gap-1.5 ${className}`}>
     <label className={`text-xs font-bold text-gray-600 uppercase tracking-wide ${required ? "after:content-['*'] after:text-red-500 after:ml-0.5" : ""}`}>{label}</label>
     {children}
@@ -554,7 +576,6 @@ const AMSAuditForm: React.FC<AMSAuditFormProps> = ({ isOpen, onClose, initialDat
                     perday: existing.dosesPerDay?.toString() || '',
                     route: existing.route,
                     diagP: existing.diagnosis,
-                    // Fix: Map systemSite to diagS and subSite to diagSub, ensuring they are strings.
                     diagS: (existing as any).systemSite || '', 
                     diagSub: (existing as any).subSite || '',
                     indicationCategory: existing.indicationCategory || '',
@@ -1041,20 +1062,6 @@ const AMSAuditForm: React.FC<AMSAuditFormProps> = ({ isOpen, onClose, initialDat
     }
   };
 
-  const getIndicationDescription = (item: AntimicrobialEntry) => {
-    if (item.indicationSpecificType && CODE_DESCRIPTIONS[item.indicationSpecificType]) {
-      return CODE_DESCRIPTIONS[item.indicationSpecificType];
-    }
-    if (item.indicationSubCategory && CODE_DESCRIPTIONS[item.indicationSubCategory]) {
-      return CODE_DESCRIPTIONS[item.indicationSubCategory];
-    }
-    if (item.indicationCategory && CODE_DESCRIPTIONS[item.indicationCategory]) {
-      return CODE_DESCRIPTIONS[item.indicationCategory];
-    }
-    return '';
-  };
-
-
   if (!isOpen) return null;
 
   return (
@@ -1111,7 +1118,7 @@ const AMSAuditForm: React.FC<AMSAuditFormProps> = ({ isOpen, onClose, initialDat
             <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm">
               <FormSectionHeader title="Audit Context" />
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <FormGroup label="Auditor" required>
+                <FormGroup label="Auditor" required error={validationErrors.auditor}>
                   <Select name="auditor" value={audit.auditor} onChange={handleAuditChange} error={validationErrors.auditor}>
                     <option value="">Select</option>
                     {AUDITORS.map(a => <option key={a} value={a}>{a}</option>)}
@@ -1119,15 +1126,15 @@ const AMSAuditForm: React.FC<AMSAuditFormProps> = ({ isOpen, onClose, initialDat
                   </Select>
                   {audit.auditor === 'Others (Specify)' && <Input name="auditorOther" placeholder="Auditor Name" value={audit.auditorOther} onChange={handleAuditChange} error={validationErrors.auditorOther} className="mt-2" />}
                 </FormGroup>
-                <FormGroup label="Ward / Area" required>
+                <FormGroup label="Ward / Area" required error={validationErrors.area}>
                   <Select name="area" value={audit.area} onChange={handleAuditChange} error={validationErrors.area}>
                     <option value="">Select</option>
                     {AREAS.map(a => <option key={a} value={a}>{a}</option>)}
                   </Select>
                   {audit.area === 'Others (Specify)' && <Input name="areaOther" placeholder="Ward Name" value={audit.areaOther} onChange={handleAuditChange} error={validationErrors.areaOther} className="mt-2" />}
                 </FormGroup>
-                <FormGroup label="Date" required><Input type="date" name="date" value={audit.date} onChange={handleAuditChange} error={validationErrors.date} /></FormGroup>
-                <FormGroup label="Shift" required>
+                <FormGroup label="Date" required error={validationErrors.date}><Input type="date" name="date" value={audit.date} onChange={handleAuditChange} error={validationErrors.date} /></FormGroup>
+                <FormGroup label="Shift" required error={validationErrors.shift}>
                   <Select name="shift" value={audit.shift} onChange={handleAuditChange} error={validationErrors.shift}>
                     <option value="">Select</option>
                     {SHIFTS.map(s => <option key={s} value={s}>{s}</option>)}
@@ -1146,17 +1153,17 @@ const AMSAuditForm: React.FC<AMSAuditFormProps> = ({ isOpen, onClose, initialDat
                     </div>
                 </div>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <FormGroup label="Hospital No." required><Input name="hospNo" value={patient.hospNo} onChange={handlePatientChange} error={validationErrors.patient_hospNo} /></FormGroup>
-                <FormGroup label="Date of Birth" required><Input type="date" name="dob" value={patient.dob} onChange={handlePatientChange} error={validationErrors.patient_dob} /></FormGroup>
+                <FormGroup label="Hospital No." required error={validationErrors.patient_hospNo}><Input name="hospNo" value={patient.hospNo} onChange={handlePatientChange} error={validationErrors.patient_hospNo} /></FormGroup>
+                <FormGroup label="Date of Birth" required error={validationErrors.patient_dob}><Input type="date" name="dob" value={patient.dob} onChange={handlePatientChange} error={validationErrors.patient_dob} /></FormGroup>
                 <FormGroup label="Calculated Age"><div className="rounded-lg border border-gray-300 px-3 py-2 text-sm bg-gray-100 text-gray-700">{patient.ageString || '—'}</div></FormGroup>
-                <FormGroup label="Sex" required>
+                <FormGroup label="Sex" required error={validationErrors.patient_sex}>
                     <Select name="sex" value={patient.sex} onChange={handlePatientChange} error={validationErrors.patient_sex}>
                         <option value="">Select</option><option value="Male">Male</option><option value="Female">Female</option>
                     </Select>
                 </FormGroup>
-                <FormGroup label="Weight (kg)" required><Input type="number" name="weight" value={patient.weight} onChange={handlePatientChange} error={validationErrors.patient_weight} /></FormGroup>
-                <FormGroup label="Height (cm)" required={patientMode === 'pediatric'}><Input type="number" name="height" value={patient.height} onChange={handlePatientChange} error={validationErrors.patient_height} /></FormGroup>
-                <FormGroup label="SCr (µmol/L)" required><Input type="number" name="scr" value={patient.scr} onChange={handlePatientChange} error={validationErrors.patient_scr} /></FormGroup>
+                <FormGroup label="Weight (kg)" required error={validationErrors.patient_weight}><Input type="number" name="weight" value={patient.weight} onChange={handlePatientChange} error={validationErrors.patient_weight} /></FormGroup>
+                <FormGroup label="Height (cm)" required={patientMode === 'pediatric'} error={validationErrors.patient_height}><Input type="number" name="height" value={patient.height} onChange={handlePatientChange} error={validationErrors.patient_height} /></FormGroup>
+                <FormGroup label="SCr (µmol/L)" required error={validationErrors.patient_scr}><Input type="number" name="scr" value={patient.scr} onChange={handlePatientChange} error={validationErrors.patient_scr} /></FormGroup>
                 <FormGroup label="eGFR"><div className="rounded-lg border border-gray-300 px-3 py-2 text-sm bg-gray-100 text-gray-700">{patient.egfr || '—'}</div></FormGroup>
               </div>
             </div>
@@ -1173,8 +1180,8 @@ const AMSAuditForm: React.FC<AMSAuditFormProps> = ({ isOpen, onClose, initialDat
                         </FormGroup>
                         {dx.bioYN === 'Yes' && (
                             <div className="grid grid-cols-2 gap-4 border-t pt-4">
-                                <FormGroup label="Biomarker" required><Select name="bioType" value={dx.bioType} onChange={handleDxChange} error={validationErrors.dx_bioType}><option value="">Select</option><option value="PCT">PCT</option><option value="CRP">CRP</option><option value="Others">Others</option></Select>{dx.bioType === 'Others' && <Input name="bioTypeOther" value={dx.bioTypeOther} onChange={handleDxChange} error={validationErrors.dx_bioTypeOther} className="mt-2" />}</FormGroup>
-                                <FormGroup label="Biological Sample" required><Select name="bioFluid" value={dx.bioFluid} onChange={handleDxChange} error={validationErrors.dx_bioFluid}><option value="">Select</option><option value="Blood">Blood</option><option value="CSF">CSF</option><option value="Others">Others</option></Select>{dx.bioFluid === 'Others' && <Input name="bioFluidOther" value={dx.bioFluidOther} onChange={handleDxChange} error={validationErrors.dx_bioFluidOther} className="mt-2" />}</FormGroup>
+                                <FormGroup label="Biomarker" required error={validationErrors.dx_bioType}><Select name="bioType" value={dx.bioType} onChange={handleDxChange} error={validationErrors.dx_bioType}><option value="">Select</option><option value="PCT">PCT</option><option value="CRP">CRP</option><option value="Others">Others</option></Select>{dx.bioType === 'Others' && <Input name="bioTypeOther" value={dx.bioTypeOther} onChange={handleDxChange} error={validationErrors.dx_bioTypeOther} className="mt-2" />}</FormGroup>
+                                <FormGroup label="Biological Sample" required error={validationErrors.dx_bioFluid}><Select name="bioFluid" value={dx.bioFluid} onChange={handleDxChange} error={validationErrors.dx_bioFluid}><option value="">Select</option><option value="Blood">Blood</option><option value="CSF">CSF</option><option value="Others">Others</option></Select>{dx.bioFluid === 'Others' && <Input name="bioFluidOther" value={dx.bioFluidOther} onChange={handleDxChange} error={validationErrors.dx_bioFluidOther} className="mt-2" />}</FormGroup>
                             </div>
                         )}
                         <FormGroup label="Culture Done?">
@@ -1184,7 +1191,7 @@ const AMSAuditForm: React.FC<AMSAuditFormProps> = ({ isOpen, onClose, initialDat
                         </FormGroup>
                         {dx.cultDone === 'Yes' && (
                              <div className="grid grid-cols-1 gap-4 border-t pt-4">
-                                <FormGroup label="Specimen" required><Select name="cultType" value={dx.cultType} onChange={handleDxChange} error={validationErrors.dx_cultType}><option value="">Select</option><option value="Blood">Blood</option><option value="Sputum">Sputum</option><option value="Stool">Stool</option><option value="Urine">Urine</option><option value="Other">Other</option></Select>{dx.cultType === 'Other' && <Input name="cultTypeOther" value={dx.cultTypeOther} onChange={handleDxChange} error={validationErrors.dx_cultTypeOther} className="mt-2" />}</FormGroup>
+                                <FormGroup label="Specimen" required error={validationErrors.dx_cultType}><Select name="cultType" value={dx.cultType} onChange={handleDxChange} error={validationErrors.dx_cultType}><option value="">Select</option><option value="Blood">Blood</option><option value="Sputum">Sputum</option><option value="Stool">Stool</option><option value="Urine">Urine</option><option value="Other">Other</option></Select>{dx.cultType === 'Other' && <Input name="cultTypeOther" value={dx.cultTypeOther} onChange={handleDxChange} error={validationErrors.dx_cultTypeOther} className="mt-2" />}</FormGroup>
                             </div>
                         )}
                     </div>
@@ -1192,10 +1199,10 @@ const AMSAuditForm: React.FC<AMSAuditFormProps> = ({ isOpen, onClose, initialDat
                 <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm">
                     <FormSectionHeader title="Patient History" />
                     <div className="space-y-4">
-                        <FormGroup label="Prev Hospitalization (3 mo)?" required>
+                        <FormGroup label="Prev Hospitalization (3 mo)?" required error={validationErrors.hist_prevHosp}>
                             <Select name="prevHosp" value={hist.prevHosp} onChange={handleHistChange} error={validationErrors.hist_prevHosp}><option value="">Select</option><option value="Yes">Yes</option><option value="No">No</option><option value="Unknown">Unknown</option></Select>
                         </FormGroup>
-                        <FormGroup label="Prev Antibiotics (1 mo)?" required>
+                        <FormGroup label="Prev Antibiotics (1 mo)?" required error={validationErrors.hist_prevAbx}>
                             <Select name="prevAbx" value={hist.prevAbx} onChange={handleHistChange} error={validationErrors.hist_prevAbx}><option value="">Select</option><option value="Yes">Yes</option><option value="No">No</option><option value="Unknown">Unknown</option></Select>
                         </FormGroup>
                     </div>
@@ -1208,129 +1215,140 @@ const AMSAuditForm: React.FC<AMSAuditFormProps> = ({ isOpen, onClose, initialDat
                 {validationErrors.noAntimicrobials && <p className="text-red-500 text-xs mb-4">{validationErrors.noAntimicrobials}</p>}
                 
                 <div className="space-y-4">
-                {abx.map((a, i) => {
-                    // ... (rest of the mapping code)
-                    return (
-                        <div key={a.id} className={`rounded-xl border transition-all ${a.isOpen ? 'bg-blue-50/30 border-blue-200 shadow-lg' : 'bg-gray-50 border-gray-200 hover:border-gray-300'}`}>
-                            <div className="flex justify-between items-center p-3 cursor-pointer select-none" onClick={() => toggleAbxAccordion(i)}>
-                                <span className="font-bold text-gray-800">Antimicrobial #{i + 1} {a.drug && `- ${a.drug}`}</span>
-                                <svg xmlns="http://www.w3.org/2000/svg" className={`h-5 w-5 text-gray-500 transition-transform ${a.isOpen ? 'rotate-180' : ''}`} viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" /></svg>
-                            </div>
-
-                            {a.isOpen && (
-                            <div className="p-4 border-t border-gray-200 space-y-6 animate-fade-in">
-                                {/* DRUG SELECTION */}
-                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                                    <FormGroup label="Monitored / Restricted" required><Select name="class" value={a.class} onChange={e => updateAbx(i, 'class', e.target.value)} error={validationErrors[`abx_${i}_class`]}><option value="">Select</option><option value="Monitored">Monitored</option><option value="Restricted">Restricted</option></Select></FormGroup>
-                                    <FormGroup label="Drug Name" required className="col-span-2"><Select name="drug" value={a.drug} onChange={e => updateAbx(i, 'drug', e.target.value)} error={validationErrors[`abx_${i}_drug`]}><option value="">Select Drug</option>{(a.class === 'Monitored' ? MONITORED_DRUGS : RESTRICTED_DRUGS).map(d => <option key={d} value={d}>{d}</option>)}</Select></FormGroup>
-                                    <FormGroup label="Start Date" required><Input type="date" name="start" value={a.start} onChange={e => updateAbx(i, 'start', e.target.value)} error={validationErrors[`abx_${i}_start`]} /></FormGroup>
-                                </div>
-
-                                {/* DOSE & ROUTE */}
-                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 items-end">
-                                    <FormGroup label="Unit Dose" required><Input type="number" min="0" name="dose" value={a.dose} onChange={e => updateAbx(i, 'dose', e.target.value)} error={validationErrors[`abx_${i}_dose`]} /></FormGroup>
-                                    <FormGroup label="Unit" required><Select name="unit" value={a.unit} onChange={e => updateAbx(i, 'unit', e.target.value)} error={validationErrors[`abx_${i}_unit`]}><option value="">Select</option><option value="g">g</option><option value="mg">mg</option><option value="mcg">mcg</option><option value="iu">IU</option></Select></FormGroup>
-                                    <FormGroup label="Route" required><Select name="route" value={a.route} onChange={e => updateAbx(i, 'route', e.target.value)} error={validationErrors[`abx_${i}_route`]}><option value="">Select</option><option value="PO">PO</option><option value="IV">IV</option><option value="IM">IM</option><option value="Other">Other</option></Select></FormGroup>
-                                </div>
-                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 items-end">
-                                     <FormGroup label="Frequency (q_h)"><Input type="number" min="1" max="48" name="freq" value={a.freq} onChange={e => updateAbx(i, 'freq', e.target.value)} placeholder="e.g. 8" /></FormGroup>
-                                     <FormGroup label="Doses/Day" required><Input type="number" min="1" max="24" name="perday" value={a.perday} onChange={e => updateAbx(i, 'perday', e.target.value)} placeholder="e.g. 3" error={validationErrors[`abx_${i}_perday`]} /></FormGroup>
-                                </div>
-
-                                {/* AI BANNERS */}
-                                <div className="space-y-2">
-                                    {aiAnalysis[i]?.renal && <div className="bg-yellow-50 border-l-4 border-yellow-400 p-3 text-yellow-800 text-xs rounded shadow-sm"><span className="font-bold">RENAL ALERT:</span> {aiAnalysis[i]?.renal?.recommendation}</div>}
-                                    {aiAnalysis[i]?.weight && <div className={`border-l-4 p-3 text-xs rounded shadow-sm ${aiAnalysis[i]?.weight?.status === 'SAFE' ? 'bg-green-50 border-green-400 text-green-800' : 'bg-orange-50 border-orange-400 text-orange-800'}`}><span className="font-bold">WEIGHT DOSE:</span> {aiAnalysis[i]?.weight?.message}</div>}
-                                    {aiAnalysis[i]?.pediatric && <div className={`border-l-4 p-3 text-xs rounded shadow-sm ${aiAnalysis[i]?.pediatric?.isSafe ? 'bg-green-50 border-green-400 text-green-800' : 'bg-orange-50 border-orange-400 text-orange-800'}`}><span className="font-bold">PEDIATRIC DOSE:</span> {aiAnalysis[i]?.pediatric?.message}</div>}
-                                </div>
-
-
-                                {/* DIAGNOSIS */}
-                                 <div className="bg-white p-4 rounded-lg border border-gray-200">
-                                    <div className="flex justify-between items-center mb-2"><h4 className="font-semibold text-sm">Diagnosis</h4><button type="button" onClick={() => { setActiveAbxIndex(i); setShowDiagnosisGuide(true); }} className="text-xs font-bold text-blue-600 hover:underline">Code Guide</button></div>
-                                    <div className="grid grid-cols-3 gap-4">
-                                        <FormGroup label="Primary" required><Select name="diagP" value={a.diagP} onChange={e => updateAbx(i, 'diagP', e.target.value)} error={validationErrors[`abx_${i}_diagP`]}><option value="">Select</option>{DIAG_PRIMARY.map(c => <option key={c} value={c}>{c}</option>)}</Select></FormGroup>
-                                        <FormGroup label="System / Site" required={a.diagP === 'Therapeutic' || a.diagP === 'Prophylaxis'}><Select name="diagS" value={a.diagS} onChange={e => updateAbx(i, 'diagS', e.target.value)} error={validationErrors[`abx_${i}_diagS`]} disabled={!a.diagP || a.diagP === 'Neonates'}><option value="">Select</option>{SITE_CATEGORIES.map(s => <option key={s} value={s}>{s}</option>)}</Select></FormGroup>
-                                        <FormGroup label="Sub-site / Code" required={(a.diagP === 'Therapeutic' || a.diagP === 'Prophylaxis') || a.diagP === 'Neonates'}><Select name="diagSub" value={a.diagSub} onChange={e => updateAbx(i, 'diagSub', e.target.value)} error={validationErrors[`abx_${i}_diagSub`]} disabled={!a.diagS && a.diagP !== 'Neonates'}><option value="">Select</option>{(a.diagP === 'Neonates' ? NEO_CODES : a.diagP === 'Prophylaxis' ? (PROPH_CODES[a.diagS] || []) : (THER_CODES[a.diagS] || [])).map(s => <option key={s} value={s}>{s}</option>)}</Select></FormGroup>
-                                        <div className="col-span-3 text-xs text-gray-500 bg-gray-50 p-2 rounded-md">{CODE_DESCRIPTIONS[a.diagSub] || 'Select code to see description.'}</div>
-                                    </div>
-                                </div>
-
-                                {/* INDICATION */}
-                                <div className="bg-white p-4 rounded-lg border border-gray-200">
-                                    <div className="flex justify-between items-center mb-2"><h4 className="font-semibold text-sm">Indication</h4><button type="button" onClick={() => { setActiveAbxIndex(i); setShowIndicationGuide(true); }} className="text-xs font-bold text-blue-600 hover:underline">Code Guide</button></div>
-                                    <div className="grid grid-cols-3 gap-4">
-                                        <FormGroup label="Category" required><Select name="indicationCategory" value={a.indicationCategory} onChange={e => updateAbx(i, 'indicationCategory', e.target.value)} error={validationErrors[`abx_${i}_indicationCategory`]}><option value="">Select</option>{INDICATION_CATEGORIES_OPTIONS.map(c => <option key={c} value={c}>{c}</option>)}</Select></FormGroup>
-                                        <FormGroup label="Sub-Category" required={a.indicationCategory === 'HAI' || a.indicationCategory === 'SP'}><Select name="indicationSubCategory" value={a.indicationSubCategory} onChange={e => updateAbx(i, 'indicationSubCategory', e.target.value)} error={validationErrors[`abx_${i}_indicationSubCategory`]} disabled={a.indicationCategory !== 'HAI' && a.indicationCategory !== 'SP'}><option value="">Select</option>{a.indicationCategory === 'HAI' ? HAI_SUB_CATEGORIES_OPTIONS.map(c => <option key={c} value={c}>{c}</option>) : SP_TYPES_OPTIONS.map(c => <option key={c} value={c}>{c}</option>)}</Select></FormGroup>
-                                        <FormGroup label="Specific Type" required={a.indicationCategory === 'HAI' && a.indicationSubCategory === 'HAI2'}><Select name="indicationSpecificType" value={a.indicationSpecificType} onChange={e => updateAbx(i, 'indicationSpecificType', e.target.value)} error={validationErrors[`abx_${i}_indicationSpecificType`]} disabled={a.indicationSubCategory !== 'HAI2'}><option value="">Select</option>{HAI2_SPECIFIC_OPTIONS.map(c => <option key={c} value={c}>{c}</option>)}</Select></FormGroup>
-                                        <div className="col-span-3 text-xs text-gray-500 bg-gray-50 p-2 rounded-md">{getIndicationDescription(a) || 'Select codes to see description.'}</div>
-                                    </div>
-                                </div>
-                                
-                                {/* COMPLIANCE */}
-                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 items-start">
-                                    <FormGroup label="Reason in Note?" required><Select name="reason" value={a.reason} onChange={e => updateAbx(i, 'reason', e.target.value)} error={validationErrors[`abx_${i}_reason`]}><option value="">Select</option><option value="Yes">Yes</option><option value="No">No</option><option value="Unknown">Unknown</option></Select></FormGroup>
-                                    <FormGroup label="Guidelines Compliant?" required><Select name="guide" value={a.guide} onChange={e => updateAbx(i, 'guide', e.target.value)} error={validationErrors[`abx_${i}_guide`]}><option value="">Select</option><option value="Yes">Yes</option><option value="No">No</option><option value="Unknown">Unknown</option></Select></FormGroup>
-                                    <FormGroup label="Stop/Review Documented?" required><Select name="stop" value={a.stop} onChange={e => updateAbx(i, 'stop', e.target.value)} error={validationErrors[`abx_${i}_stop`]}><option value="">Select</option><option value="Yes">Yes</option><option value="No">No</option><option value="Unknown">Unknown</option></Select></FormGroup>
-                                    <FormGroup label="Treatment" required><Select name="treat" value={a.treat} onChange={e => updateAbx(i, 'treat', e.target.value)} error={validationErrors[`abx_${i}_treat`]}><option value="">Select</option><option value="Empirical">Empirical</option><option value="Directed">Directed</option><option value="Prophylactic">Prophylactic</option></Select></FormGroup>
-                                    <FormGroup label="Missed Doses (N)"><Input type="number" min="0" name="miss" value={a.miss} onChange={e => updateAbx(i, 'miss', e.target.value)} /></FormGroup>
-                                    {Number(a.miss) > 0 && <FormGroup label="Reason for Missed Dose" required><Select name="missWhy" value={a.missWhy} onChange={e => updateAbx(i, 'missWhy', e.target.value)} error={validationErrors[`abx_${i}_missWhy`]}><option value="">Select</option>{MISS_REASONS.map(r => <option key={r} value={r}>{r}</option>)}</Select></FormGroup>}
-                                </div>
-                            </div>
-                            )}
+                {abx.map((a, i) => (
+                    <div key={a.id} className={`rounded-xl border transition-all ${a.isOpen ? 'bg-blue-50/30 border-blue-200 shadow-lg' : 'bg-gray-50 border-gray-200 hover:border-gray-300'}`}>
+                        <div className="flex justify-between items-center p-3 cursor-pointer select-none" onClick={() => toggleAbxAccordion(i)}>
+                            <span className="font-bold text-gray-800">Antimicrobial #{i + 1} {a.drug && `- ${a.drug}`}</span>
+                            <svg xmlns="http://www.w3.org/2000/svg" className={`h-5 w-5 text-gray-500 transition-transform ${a.isOpen ? 'rotate-180' : ''}`} viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" /></svg>
                         </div>
-                    );
-                })}
+
+                        {a.isOpen && (
+                        <div className="p-4 border-t border-gray-200 space-y-6 animate-fade-in">
+                            {/* DRUG SELECTION */}
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                <FormGroup label="Monitored / Restricted" required error={validationErrors[`abx_${i}_class`]}><Select name="class" value={a.class} onChange={e => updateAbx(i, 'class', e.target.value)} error={validationErrors[`abx_${i}_class`]}><option value="">Select</option><option value="Monitored">Monitored</option><option value="Restricted">Restricted</option></Select></FormGroup>
+                                <FormGroup label="Drug Name" required className="col-span-2" error={validationErrors[`abx_${i}_drug`]}><Select name="drug" value={a.drug} onChange={e => updateAbx(i, 'drug', e.target.value)} error={validationErrors[`abx_${i}_drug`]}><option value="">Select Drug</option>{(a.class === 'Monitored' ? MONITORED_DRUGS : RESTRICTED_DRUGS).map(d => <option key={d} value={d}>{d}</option>)}</Select></FormGroup>
+                                <FormGroup label="Start Date" required error={validationErrors[`abx_${i}_start`]}><Input type="date" name="start" value={a.start} onChange={e => updateAbx(i, 'start', e.target.value)} error={validationErrors[`abx_${i}_start`]} /></FormGroup>
+                            </div>
+
+                            {/* DOSE & ROUTE */}
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 items-end">
+                                <FormGroup label="Unit Dose" required error={validationErrors[`abx_${i}_dose`]}><Input type="number" min="0" name="dose" value={a.dose} onChange={e => updateAbx(i, 'dose', e.target.value)} error={validationErrors[`abx_${i}_dose`]} /></FormGroup>
+                                <FormGroup label="Unit" required error={validationErrors[`abx_${i}_unit`]}><Select name="unit" value={a.unit} onChange={e => updateAbx(i, 'unit', e.target.value)} error={validationErrors[`abx_${i}_unit`]}><option value="">Select</option><option value="g">g</option><option value="mg">mg</option><option value="mcg">mcg</option><option value="iu">IU</option></Select></FormGroup>
+                                <FormGroup label="Route" required error={validationErrors[`abx_${i}_route`]}><Select name="route" value={a.route} onChange={e => updateAbx(i, 'route', e.target.value)} error={validationErrors[`abx_${i}_route`]}><option value="">Select</option><option value="PO">PO</option><option value="IV">IV</option><option value="IM">IM</option><option value="Other">Other</option></Select></FormGroup>
+                            </div>
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 items-end">
+                                    <FormGroup label="Frequency (q_h)"><Input type="number" min="1" max="48" name="freq" value={a.freq} onChange={e => updateAbx(i, 'freq', e.target.value)} placeholder="e.g. 8" /></FormGroup>
+                                    <FormGroup label="Doses/Day" required error={validationErrors[`abx_${i}_perday`]}><Input type="number" min="1" max="24" name="perday" value={a.perday} onChange={e => updateAbx(i, 'perday', e.target.value)} placeholder="e.g. 3" error={validationErrors[`abx_${i}_perday`]} /></FormGroup>
+                            </div>
+
+                            {/* AI BANNERS */}
+                            <div className="space-y-2">
+                                {aiAnalysis[i]?.renal && <div className="bg-yellow-50 border-l-4 border-yellow-400 p-3 text-yellow-800 text-xs rounded shadow-sm"><span className="font-bold">RENAL ALERT:</span> {aiAnalysis[i]?.renal?.recommendation}</div>}
+                                {aiAnalysis[i]?.weight && <div className={`border-l-4 p-3 text-xs rounded shadow-sm ${aiAnalysis[i]?.weight?.status === 'SAFE' ? 'bg-green-50 border-green-400 text-green-800' : 'bg-orange-50 border-orange-400 text-orange-800'}`}><span className="font-bold">WEIGHT DOSE:</span> {aiAnalysis[i]?.weight?.message}</div>}
+                                {aiAnalysis[i]?.pediatric && <div className={`border-l-4 p-3 text-xs rounded shadow-sm ${aiAnalysis[i]?.pediatric?.isSafe ? 'bg-green-50 border-green-400 text-green-800' : 'bg-orange-50 border-orange-400 text-orange-800'}`}><span className="font-bold">PEDIATRIC DOSE:</span> {aiAnalysis[i]?.pediatric?.message}</div>}
+                            </div>
+
+
+                            {/* DIAGNOSIS */}
+                                <div className="bg-white p-4 rounded-lg border border-gray-200">
+                                <div className="flex justify-between items-center mb-2"><h4 className="font-semibold text-sm">Diagnosis</h4><button type="button" onClick={() => { setActiveAbxIndex(i); setShowDiagnosisGuide(true); }} className="text-xs font-bold text-blue-600 hover:underline">Code Guide</button></div>
+                                <div className="grid grid-cols-3 gap-4">
+                                    <FormGroup label="Primary" required error={validationErrors[`abx_${i}_diagP`]}><Select name="diagP" value={a.diagP} onChange={e => updateAbx(i, 'diagP', e.target.value)} error={validationErrors[`abx_${i}_diagP`]}><option value="">Select</option>{DIAG_PRIMARY.map(c => <option key={c} value={c}>{c}</option>)}</Select></FormGroup>
+                                    <FormGroup label="System / Site" required={(a.diagP === 'Therapeutic' || a.diagP === 'Prophylaxis')} error={validationErrors[`abx_${i}_diagS`]}><Select name="diagS" value={a.diagS} onChange={e => updateAbx(i, 'diagS', e.target.value)} error={validationErrors[`abx_${i}_diagS`]} disabled={!a.diagP || a.diagP === 'Neonates'}><option value="">Select</option>{SITE_CATEGORIES.map(s => <option key={s} value={s}>{s}</option>)}</Select></FormGroup>
+                                    <FormGroup label="Sub-site / Code" required={((a.diagP === 'Therapeutic' || a.diagP === 'Prophylaxis') && !!a.diagS)} error={validationErrors[`abx_${i}_diagSub`]}>
+                                        <input readOnly onClick={() => { setActiveAbxIndex(i); setShowDiagnosisGuide(true); }} value={a.diagSub} className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm bg-gray-50 text-gray-700 cursor-pointer hover:bg-gray-100" placeholder="Click Code Guide" />
+                                    </FormGroup>
+                                </div>
+                            </div>
+
+                            {/* INDICATION */}
+                            <div className="bg-white p-4 rounded-lg border border-gray-200">
+                                <div className="flex justify-between items-center mb-2"><h4 className="font-semibold text-sm">Indication</h4><button type="button" onClick={() => { setActiveAbxIndex(i); setShowIndicationGuide(true); }} className="text-xs font-bold text-blue-600 hover:underline">Type Guide</button></div>
+                                <div className="grid grid-cols-1 gap-2">
+                                    <input readOnly onClick={() => { setActiveAbxIndex(i); setShowIndicationGuide(true); }} value={`${a.indicationCategory ? a.indicationCategory : ''}${a.indicationSubCategory ? ' > ' + a.indicationSubCategory : ''}${a.indicationSpecificType ? ' > ' + a.indicationSpecificType : ''}`} className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm bg-gray-50 text-gray-700 cursor-pointer hover:bg-gray-100" placeholder="Click Type Guide to Select Indication" />
+                                    {getIndicationDescription(a) && <p className="text-xs text-gray-500 italic mt-1">{getIndicationDescription(a)}</p>}
+                                    {validationErrors[`abx_${i}_indicationCategory`] && <p className="text-red-500 text-xs">{validationErrors[`abx_${i}_indicationCategory`]}</p>}
+                                </div>
+                            </div>
+
+                            {/* COMPLIANCE & REASONS */}
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                <FormGroup label="Reason in Note?" required error={validationErrors[`abx_${i}_reason`]}><Select name="reason" value={a.reason} onChange={e => updateAbx(i, 'reason', e.target.value)} error={validationErrors[`abx_${i}_reason`]}><option value="">Select</option><option value="Yes">Yes</option><option value="No">No</option></Select></FormGroup>
+                                <FormGroup label="Guidelines Compliant?" required error={validationErrors[`abx_${i}_guide`]}><Select name="guide" value={a.guide} onChange={e => updateAbx(i, 'guide', e.target.value)} error={validationErrors[`abx_${i}_guide`]}><option value="">Select</option><option value="Yes">Yes</option><option value="No">No</option></Select></FormGroup>
+                                <FormGroup label="Stop/Review Date Documented?"><Select name="stop" value={a.stop} onChange={e => updateAbx(i, 'stop', e.target.value)}><option value="">Select</option><option value="Yes">Yes</option><option value="No">No</option></Select></FormGroup>
+                                <FormGroup label="Treatment" required error={validationErrors[`abx_${i}_treat`]}><Select name="treat" value={a.treat} onChange={e => updateAbx(i, 'treat', e.target.value)} error={validationErrors[`abx_${i}_treat`]}><option value="">Select</option><option value="Empiric">Empiric</option><option value="Targeted">Targeted</option></Select></FormGroup>
+                            </div>
+
+                            {/* MISSED DOSES */}
+                            <div className="grid grid-cols-2 gap-4 pt-2 border-t border-gray-100">
+                                <FormGroup label="Missed Doses (N)"><Input type="number" min="0" name="miss" value={a.miss} onChange={e => updateAbx(i, 'miss', e.target.value)} /></FormGroup>
+                                {Number(a.miss) > 0 && <FormGroup label="Reason for Missed Dose" required error={validationErrors[`abx_${i}_missWhy`]}><Select name="missWhy" value={a.missWhy} onChange={e => updateAbx(i, 'missWhy', e.target.value)} error={validationErrors[`abx_${i}_missWhy`]}><option value="">Select</option>{MISS_REASONS.map(r => <option key={r} value={r}>{r}</option>)}</Select></FormGroup>}
+                            </div>
+                        </div>
+                        )}
+                    </div>
+                ))}
                 </div>
             </div>
 
-            {/* MICROORGANISMS */}
-             <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm">
-                <div className="flex justify-between items-center cursor-pointer select-none" onClick={() => setIsMicroCollapsed(!isMicroCollapsed)}>
-                    <h2 className="text-xs font-bold text-gray-500 uppercase tracking-wider">Microorganisms</h2>
-                    <button type="button" className="text-gray-500 hover:text-gray-700">{isMicroCollapsed ? 'Show' : 'Hide'}</button>
+            {/* MICROBIOLOGY */}
+            <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm">
+                <div className="flex justify-between items-center mb-4 border-b border-gray-200 pb-2">
+                    <h2 className="text-xs font-bold text-gray-500 uppercase tracking-wider flex items-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-green-600" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M5 2a2 2 0 00-2 2v14l4-2 4 2 4-2 4 2V4a2 2 0 00-2-2H5zm0 2h10v12.382l-3-1.5-2 1-2-1-3 1.5V4z" clipRule="evenodd" /></svg>
+                        Microbiology
+                    </h2>
+                    <button type="button" onClick={addMicroorganism} className="text-xs font-bold text-blue-600 hover:text-blue-700 bg-blue-50 px-3 py-1 rounded-lg border border-blue-100">+ Add Organism</button>
                 </div>
+                
                 {!isMicroCollapsed && (
-                    <div className="mt-4 space-y-4 animate-fade-in">
-                        {micro.map(m => (
-                            <div key={m.id} className="grid grid-cols-1 md:grid-cols-4 gap-4 items-start border-t pt-4">
-                                <FormGroup label="Organism Name"><Input value={m.org} onChange={e => updateMicroorganism(m.id, 'org', e.target.value)} /></FormGroup>
-                                <FormGroup label="Resistance Profile"><Select value={m.res} onChange={e => updateMicroorganism(m.id, 'res', e.target.value)}><option value="">Select</option>{RES_TYPES.map(r => <option key={r} value={r}>{r}</option>)}</Select></FormGroup>
-                                <FormGroup label="Notes (e.g. source)"><Textarea rows={2} value={m.note} onChange={e => updateMicroorganism(m.id, 'note', e.target.value)} /></FormGroup>
-                                <button type="button" onClick={() => removeMicroorganism(m.id)} className="text-red-500 hover:text-red-700 p-2 rounded-full self-center mt-4"><svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg></button>
+                    <div className="space-y-3 animate-fade-in">
+                        {micro.map((m, i) => (
+                            <div key={m.id} className="grid grid-cols-1 md:grid-cols-3 gap-3 items-end bg-gray-50 p-3 rounded-lg border border-gray-200">
+                                <FormGroup label="Organism"><Input placeholder="e.g. E. coli" value={m.org} onChange={e => updateMicroorganism(m.id, 'org', e.target.value)} /></FormGroup>
+                                <FormGroup label="Resistance">
+                                    <Select value={m.res} onChange={e => updateMicroorganism(m.id, 'res', e.target.value)}>
+                                        <option value="">None / Sensitive</option>
+                                        {RES_TYPES.map(r => <option key={r} value={r}>{r}</option>)}
+                                    </Select>
+                                </FormGroup>
+                                <div className="flex gap-2">
+                                    <FormGroup label="Note" className="flex-grow"><Input placeholder="Optional details..." value={m.note} onChange={e => updateMicroorganism(m.id, 'note', e.target.value)} /></FormGroup>
+                                    <button onClick={() => removeMicroorganism(m.id)} className="text-red-500 hover:bg-red-50 p-2 rounded-lg"><svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg></button>
+                                </div>
                             </div>
                         ))}
-                        <button type="button" onClick={addMicroorganism} className="flex items-center text-green-600 hover:text-green-800 text-sm font-medium gap-1 mt-4"><svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg> Add Organism</button>
                     </div>
                 )}
-             </div>
-             
-             {/* General Audit Note */}
-            <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm">
-              <FormSectionHeader title="General Audit Notes" />
-              <FormGroup label="General notes, observations, or summary for this entire audit">
-                 <Textarea 
-                   value={generalNote}
-                   onChange={e => setGeneralNote(e.target.value)}
-                   rows={3}
-                   placeholder="e.g., Patient is clinically improving but markers are slow to resolve. Discussed de-escalation plan with team."
-                 />
-              </FormGroup>
+                {micro.length === 0 && <p className="text-sm text-gray-400 italic">No organisms recorded.</p>}
             </div>
+
+            {/* GENERAL AUDIT NOTES */}
+            <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm">
+                <FormSectionHeader title="General Audit Notes" icon={<svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-amber-600" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" /></svg>} />
+                <Textarea 
+                    rows={3} 
+                    placeholder="Enter high-level summary, recommendations, or general observations for this audit case..."
+                    value={generalNote}
+                    onChange={(e) => setGeneralNote(e.target.value)}
+                />
+            </div>
+
           </div>
 
-          {/* Footer with Actions */}
-          <div className="p-4 bg-white border-t border-gray-200 flex justify-end gap-3 shadow-[0_-2px_10px_rgba(0,0,0,0.05)]">
-            <button type="button" onClick={onClose} className="px-5 py-2.5 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm font-medium transition-colors">Cancel</button>
-            <button type="button" onClick={handleInitialSubmit} disabled={loading} className="px-6 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm font-bold shadow-sm hover:shadow-lg transition-all flex items-center gap-2">
-              Review & Submit
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
+          {/* Footer */}
+          <footer className="p-4 bg-white border-t border-gray-200 flex justify-end gap-3 shrink-0">
+            <button onClick={onClose} className="px-6 py-2 text-gray-600 hover:bg-gray-100 rounded-lg text-sm font-bold border border-gray-300 transition-colors">Cancel</button>
+            <button onClick={handleInitialSubmit} className="px-8 py-2 bg-blue-600 text-white rounded-lg text-sm font-bold shadow-sm hover:bg-blue-700 transition-colors flex items-center gap-2">
+                Review Audit
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>
             </button>
-          </div>
+          </footer>
         </div>
       </div>
     </>
   );
 };
-// FIX: Add default export to resolve import error in App.tsx
+
 export default AMSAuditForm;

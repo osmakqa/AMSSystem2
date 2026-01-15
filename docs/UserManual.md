@@ -14,7 +14,7 @@ The system is accessible via web browser. The login screen provides role-based a
 *   **View User Manual:** Click this link to open this documentation at any time.
 
 ### **Login Credentials**
-Log in using the credentials provided by the IPC. Passwords are case-sensitive and typically follow a predictable format (all lowercase).
+Log in using the credentials provided by the AMS Committee or IT Department. Passwords are case-sensitive and typically follow a predictable format (all lowercase).
 
 | User Role | Password Format | Example |
 | :--- | :--- | :--- |

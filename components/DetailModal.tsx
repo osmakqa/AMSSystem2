@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect } from 'react';
 import { Prescription, UserRole, PrescriptionStatus, DrugType, ActionType, RequestFinding } from '../types';
 import { IDS_SPECIALISTS } from '../constants'; 
@@ -216,7 +217,7 @@ const DetailModal: React.FC<DetailModalProps> = ({ isOpen, onClose, item, role, 
     return <div className={fullWidth ? 'col-span-full' : ''}><p className="text-xs text-gray-500 uppercase font-semibold">{label}</p><p className="text-sm text-gray-900 font-medium break-words whitespace-pre-wrap">{displayValue || '-'}</p></div>;
   };
 
-  const SelectableSection = ({ id, title, children, className = '' }: { id: string, title: string, children: React.ReactNode, className?: string }) => {
+  const SelectableSection = ({ id, title, children, className = '' }: { id: string, title: string, children?: React.ReactNode, className?: string }) => {
     const isSelected = isReviewer && activeSection === id; // Only reviewers can select
     const hasFinding = isReviewer && findings.some(f => f.section === id); // Only reviewers see their own temporary findings
     return (
